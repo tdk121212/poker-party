@@ -1,0 +1,227 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تاریخچه تراکنش‌های بازیکن</title>
+    <!-- PWA: Link to manifest.json -->
+    <link rel="manifest" href="/manifest.json">
+    <!-- PWA: Apple Touch Icon -->
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+    <!-- PWA: Theme Color -->
+    <meta name="theme-color" content="#6a5acd">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            background: linear-gradient(135deg, #4b4b4b, #2f2f2f);
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 900px;
+            margin: 30px auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        h2 {
+            text-align: center;
+            color: #ffffff;
+            margin-bottom: 30px;
+            font-size: 2rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: right;
+        }
+
+        th {
+            background: linear-gradient(45deg, #6a5acd, #9370db);
+            color: white;
+            font-weight: bold;
+        }
+
+        td {
+            background: rgba(255, 255, 255, 0.15);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            color: #e0e0e0;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 15px 30px;
+            background: linear-gradient(45deg, #6a5acd, #9370db);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: linear-gradient(45deg, #9370db, #6a5acd);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(106, 90, 205, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>تاریخچه تراکنش‌های <span id="player-name"></span></h2>
+        <table id="transactions-table">
+            <thead>
+                <tr>
+                    <th>نوع تراکنش</th>
+                    <th>مقدار</th>
+                    <th>زمان</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <a href="index.html" class="back-btn">بازگشت به صفحه اصلی</a>
+    </div>
+
+    <script>
+        // PWA: Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('Service Worker registered with scope:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.error('Service Worker registration failed:', error);
+                    });
+            });
+        }
+
+        function getPlayers() {
+            const players = localStorage.getItem('pokerPlayers');
+            if (!players) return [];
+            const parsedPlayers = JSON.parse(players);
+            return parsedPlayers.map(player => ({
+                name: player.name,
+                deposits: player.deposit && player.depositTime ? [{ amount: player.deposit, time: player.depositTime }] : (player.deposits || []),
+                chipsReceived: player.chips && player.chipsTime ? [{ amount: player.chips, time: player.chipsTime }] : (player.chipsReceived || []),
+                chipsConverted: player.convertedMoney ? [{ amount: player.convertedMoney, time: player.convertedTime || new Date().toLocaleString() }] : (player.chipsConverted || []),
+            }));
+        }
+
+        function loadTransactions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const playerName = urlParams.get('name');
+            const playerNameElement = document.getElementById('player-name');
+            const tableBody = document.querySelector('#transactions-table tbody');
+
+            if (!playerName) {
+                playerNameElement.textContent = 'بازیکن یافت نشد';
+                return;
+            }
+
+            playerNameElement.textContent = playerName;
+            const players = getPlayers();
+            const player = players.find(p => p.name === playerName);
+
+            if (!player) {
+                playerNameElement.textContent = 'بازیکن یافت نشد';
+                return;
+            }
+
+            tableBody.innerHTML = '';
+            player.deposits.forEach(deposit => {
+                const row = tableBody.insertRow();
+                row.innerHTML = `<td>واریزی</td><td>${deposit.amount}</td><td>${deposit.time}</td>`;
+            });
+            player.chipsReceived.forEach(chips => {
+                const row = tableBody.insertRow();
+                row.innerHTML = `<td>چیپ دریافتی</td><td>${chips.amount}</td><td>${chips.time}</td>`;
+            });
+            player.chipsConverted.forEach(converted => {
+                const row = tableBody.insertRow();
+                row.innerHTML = `<td>تبدیل چیپ به پول</td><td>${converted.amount}</td><td>${converted.time}</td>`;
+            });
+        }
+
+        window.onload = loadTransactions;
+    </script>
+</body>
+</html>

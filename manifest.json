@@ -1,0 +1,23 @@
+{
+  "name": "مدیریت بازی پوکر خانگی",
+  "short_name": "پوکر خانگی",
+  "description": "اپلیکیشن مدیریت بازیکنان و تراکنش‌های پوکر خانگی",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#4b4b4b",
+  "theme_color": "#6a5acd",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "orientation": "portrait",
+  "lang": "fa"
+}
