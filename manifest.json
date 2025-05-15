@@ -1,6 +1,6 @@
 {
   "name": "مدیریت بازی پوکر خانگی",
-  "short_name": "پوکر خانگی",
+  "short_name": "POKER PARTY",
   "description": "اپلیکیشن مدیریت بازیکنان و تراکنش‌های پوکر خانگی",
   "start_url": "/poker-party/index.html",
   "display": "standalone",
