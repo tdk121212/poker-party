@@ -259,7 +259,7 @@
         /* Totals table styles */
         #totals-table-container {
             margin-top: 20px;
-            margin-bottom: 80px; /* Added to prevent overlap with bottom-nav */
+            margin-bottom: 80px;
         }
 
         #totals-table {
@@ -400,12 +400,22 @@
             box-shadow: 0 4px 15px rgba(106, 90, 205, 0.4);
         }
 
-        .modal-content button:last-child {
+        .modal-content .delete-btn {
             background: linear-gradient(45deg, #dc143c, #ff4500);
         }
 
-        .modal-content button:last-child:hover {
+        .modal-content .delete-btn:hover {
             background: linear-gradient(45deg, #ff4500, #dc143c);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(220, 20, 60, 0.4);
+        }
+
+        .modal-content button:last-child {
+            background: linear-gradient(45deg, #6a5acd, #9370db);
+        }
+
+        .modal-content button:last-child:hover {
+            background: linear-gradient(45deg, #9370db, #6a5acd);
         }
 
         .modal-content label {
@@ -414,6 +424,13 @@
             font-weight: bold;
             color: #ffffff;
             font-size: 1.1rem;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
         #new-game-section .modal-content button {
@@ -816,7 +833,7 @@
                 <span class="label">ثبت واریزی</span>
             </button>
             <button class="nav-item" onclick="openModal('record-chips-modal')">
-                <span class="icon">🟡</span>
+                <span class="icon">🪙</span>
                 <span class="label">ثبت چیپ</span>
             </button>
             <button class="nav-item" onclick="openModal('convert-chips-modal')">
@@ -905,8 +922,11 @@
             <input type="text" id="edit-player-name" placeholder="نام بازیکن">
             <input type="text" inputmode="numeric" id="edit-deposit-amount" placeholder="واریزی جدید (اختیاری)" oninput="formatNumberInput(this)">
             <input type="text" inputmode="numeric" id="edit-chips-amount" placeholder="چیپ جدید (اختیاری)" oninput="formatNumberInput(this)">
-            <button onclick="confirmEditPlayer()">ذخیره</button>
-            <button onclick="closeModal('edit-player-modal')">بازگشت</button>
+            <div class="modal-buttons">
+                <button onclick="confirmEditPlayer()">ذخیره</button>
+                <button class="delete-btn" onclick="showCustomAlert('آیا مطمئن هستید که می‌خواهید ' + document.getElementById('edit-player-name').value + ' را حذف کنید؟ این عمل غیرقابل بازگشت است.', () => deletePlayer(document.getElementById('edit-player-name').value))">حذف</button>
+                <button onclick="closeModal('edit-player-modal')">بازگشت</button>
+            </div>
         </div>
     </div>
 
@@ -1173,7 +1193,6 @@
                     <td>${formatNumber(totalChips)}</td>
                     <td class="${creditClass}">${formatNumber(remainingCredit)}</td>
                     <td class="action-buttons">
-                        <button class="delete-btn" onclick="showCustomAlert('آیا مطمئن هستید که می‌خواهید ${player.name} را حذف کنید؟ این عمل غیرقابل بازگشت است.', () => deletePlayer('${player.name}'))">حذف</button>
                         <button class="edit-btn" onclick="openEditPlayerModal('${player.name}')">ویرایش</button>
                     </td>
                 `;
@@ -1255,6 +1274,7 @@
             const updatedPlayers = players.filter(player => player.name !== playerName);
             savePlayers(updatedPlayers);
             loadPlayers();
+            closeModal('edit-player-modal');
         }
 
         function recordDeposit() {
