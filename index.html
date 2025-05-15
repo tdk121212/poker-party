@@ -290,99 +290,50 @@
             border-bottom: none;
         }
 
-        .floating-menu {
+        .bottom-nav {
             position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1100;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .fab-main {
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(45deg, #6a5acd, #9370db);
-            border: none;
-            border-radius: 50%;
-            color: white;
-            font-size: 2rem;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(106, 90, 205, 0.4);
-            transition: all 0.3s ease;
-        }
-
-        .fab-main:hover {
-            background: linear-gradient(45deg, #9370db, #6a5acd);
-            transform: scale(1.1);
-            box-shadow: 0 6px 20px rgba(106, 90, 205, 0.5);
-        }
-
-        .fab-main.open {
-            transform: rotate(45deg);
-        }
-
-        .menu-items {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            margin-bottom: 15px;
+            bottom: 0;
+            left: 0;
+            right: 0;
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
-            border-radius: 10px;
-            padding: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-        }
-
-        .menu-items.open {
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
             display: flex;
-            animation: slideUp 0.3s ease-in-out;
-        }
-
-        .menu-item {
-            display: flex;
+            justify-content: space-around;
             align-items: center;
-            width: 220px;
-            padding: 12px 15px;
-            margin: 5px 0;
-            background: linear-gradient(45deg, #4b4b4b, #2f2f2f);
+            padding: 10px 5px;
+            z-index: 1100;
+            box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: none;
             border: none;
-            border-radius: 8px;
             color: #ffffff;
-            font-size: 1.1rem;
+            font-size: 0.9rem;
             font-weight: bold;
             cursor: pointer;
+            padding: 8px;
+            min-width: 60px;
             transition: all 0.3s ease;
         }
 
-        .menu-item:hover {
-            background: linear-gradient(45deg, #6a5acd, #9370db);
+        .nav-item:hover {
+            background: rgba(106, 90, 205, 0.3);
+            border-radius: 8px;
             transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(106, 90, 205, 0.4);
         }
 
-        .menu-item .icon {
-            font-size: 1.5rem;
-            margin-left: 10px;
+        .nav-item .icon {
+            font-size: 2rem;
+            margin-bottom: 5px;
         }
 
-        .menu-item .label {
-            flex-grow: 1;
-            text-align: right;
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .nav-item .label {
+            text-align: center;
         }
 
         .modal {
@@ -591,7 +542,7 @@
             background: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(5px);
             display: flex;
-            align-items: center W
+            align-items: center;
             justify-content: center;
         }
 
@@ -720,33 +671,17 @@
                 font-size: 0.9rem;
             }
 
-            .floating-menu {
-                bottom: 15px;
+            .bottom-nav {
+                padding: 8px 3px;
             }
 
-            .fab-main {
-                width: 50px;
-                height: 50px;
-                font-size: 1.8rem;
+            .nav-item {
+                font-size: 0.8rem;
+                padding: 6px;
+                min-width: 50px;
             }
 
-            .menu-items {
-                padding: 8px;
-                width: 60px;
-            }
-
-            .menu-item {
-                width: 100%;
-                padding: 10px;
-                justify-content: center;
-            }
-
-            .menu-item .label {
-                display: none;
-            }
-
-            .menu-item .icon {
-                margin-left: 0;
+            .nav-item .icon {
                 font-size: 1.8rem;
             }
 
@@ -835,26 +770,19 @@
                 font-size: 0.8rem;
             }
 
-            .floating-menu {
-                bottom: 10px;
+            .bottom-nav {
+                padding: 6px 2px;
             }
 
-            .fab-main {
-                width: 45px;
-                height: 45px;
+            .nav-item {
+                font-size: 0.7rem;
+                padding: 5px;
+                min-width: 45px;
+            }
+
+            .nav-item .icon {
                 font-size: 1.6rem;
-            }
-
-            .menu-items {
-                padding: 6px;
-            }
-
-            .menu-item {
-                padding: 8px;
-            }
-
-            .menu-item .icon {
-                font-size: 1.6rem;
+                margin-bottom: 3px;
             }
 
             .modal-content {
@@ -877,34 +805,31 @@
     </div>
 
     <div id="app-page">
-        <div class="floating-menu" id="floating-menu">
-            <button class="fab-main" id="fab-main" onclick="toggleFloatingMenu()">➕</button>
-            <div class="menu-items" id="menu-items">
-                <button class="menu-item" onclick="openModal('add-player-modal')">
-                    <span class="icon">➕</span>
-                    <span class="label">اضافه کردن بازیکن</span>
-                </button>
-                <button class="menu-item" onclick="openModal('record-deposit-modal')">
-                    <span class="icon">💸</span>
-                    <span class="label">ثبت واریزی</span>
-                </button>
-                <button class="menu-item" onclick="openModal('record-chips-modal')">
-                    <span class="icon">🪙</span>
-                    <span class="label">ثبت چیپ دریافتی</span>
-                </button>
-                <button class="menu-item" onclick="openModal('convert-chips-modal')">
-                    <span class="icon">💰</span>
-                    <span class="label">تبدیل چیپ به پول</span>
-                </button>
-                <button class="menu-item" onclick="openNewGameSection()">
-                    <span class="icon">♻️</span>
-                    <span class="label">شروع بازی جدید</span>
-                </button>
-                <button class="menu-item" onclick="logout()">
-                    <span class="icon">🚪</span>
-                    <span class="label">خروج</span>
-                </button>
-            </div>
+        <div class="bottom-nav">
+            <button class="nav-item" onclick="openModal('add-player-modal')">
+                <span class="icon">➕</span>
+                <span class="label">اضافه کردن بازیکن</span>
+            </button>
+            <button class="nav-item" onclick="openModal('record-deposit-modal')">
+                <span class="icon">💸</span>
+                <span class="label">ثبت واریزی</span>
+            </button>
+            <button class="nav-item" onclick="openModal('record-chips-modal')">
+                <span class="icon">🪙</span>
+                <span class="label">ثبت چیپ</span>
+            </button>
+            <button class="nav-item" onclick="openModal('convert-chips-modal')">
+                <span class="icon">💰</span>
+                <span class="label">تبدیل چیپ</span>
+            </button>
+            <button class="nav-item" onclick="openNewGameSection()">
+                <span class="icon">♻️</span>
+                <span class="label">بازی جدید</span>
+            </button>
+            <button class="nav-item" onclick="logout()">
+                <span class="icon">🚪</span>
+                <span class="label">خروج</span>
+            </button>
         </div>
 
         <div id="players-table-container" class="container">
@@ -1146,13 +1071,6 @@
             customSelect.removeAttribute('data-selected');
         }
 
-        function toggleFloatingMenu() {
-            const menuItems = document.getElementById('menu-items');
-            const fabMain = document.getElementById('fab-main');
-            menuItems.classList.toggle('open');
-            fabMain.classList.toggle('open');
-        }
-
         window.onload = function() {
             const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
             if (isLoggedIn) {
@@ -1200,12 +1118,6 @@
             if (modalId === 'record-deposit-modal' || modalId === 'record-chips-modal' || modalId === 'convert-chips-modal') {
                 populatePlayerSelect(modalId);
                 initializeCustomSelect(modalId);
-            }
-            const menuItems = document.getElementById('menu-items');
-            const fabMain = document.getElementById('fab-main');
-            if (menuItems.classList.contains('open')) {
-                menuItems.classList.remove('open');
-                fabMain.classList.remove('open');
             }
         }
 
@@ -1416,12 +1328,6 @@
         function openNewGameSection() {
             document.getElementById('new-game-section').style.display = 'block';
             document.getElementById('players-table-container').style.display = 'none';
-            const menuItems = document.getElementById('menu-items');
-            const fabMain = document.getElementById('fab-main');
-            if (menuItems.classList.contains('open')) {
-                menuItems.classList.remove('open');
-                fabMain.classList.remove('open');
-            }
         }
 
         function closeNewGameSection() {
@@ -1462,12 +1368,6 @@
             });
             if (event.target === document.getElementById('custom-alert-modal')) {
                 closeCustomAlert();
-            }
-            const menuItems = document.getElementById('menu-items');
-            const fabMain = document.getElementById('fab-main');
-            if (menuItems.classList.contains('open') && !fabMain.contains(event.target) && !menuItems.contains(event.target)) {
-                menuItems.classList.remove('open');
-                fabMain.classList.remove('open');
             }
         }
     </script>
