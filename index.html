@@ -260,14 +260,14 @@
         #totals-table-container {
             margin-top: 20px;
             margin-bottom: 80px;
-            overflow-x: auto; /* Added to allow horizontal scrolling for the totals table if needed */
+            overflow-x: auto;
         }
 
         #totals-table {
-            width: auto; /* Allow table to size to content */
-            min-width: 550px; /* Adjusted for four columns */
-            max-width: 100%; /* Don't exceed container */
-            margin: 0 auto; /* Center the table if it's narrower than container */
+            width: auto; 
+            min-width: 550px; 
+            max-width: 100%; 
+            margin: 0 auto; 
         }
 
         #totals-table th, #totals-table td {
@@ -677,7 +677,7 @@
             }
 
             #totals-table {
-                min-width: 450px; /* Adjusted for four columns */
+                min-width: 450px; 
             }
 
             #totals-table th, #totals-table td {
@@ -776,7 +776,7 @@
             }
 
             #totals-table {
-                min-width: 400px; /* Adjusted for four columns */
+                min-width: 400px; 
             }
 
             #totals-table th, #totals-table td {
@@ -983,6 +983,7 @@
     <script>
         const adminPassword = "1234";
         let currentEditPlayerName = null;
+        let appPageURL; // برای ذخیره URL صفحه اصلی برنامه جهت مدیریت دکمه بازگشت
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -1105,6 +1106,13 @@
                 document.getElementById('custom-alert-modal').style.display = 'none';
                 loadPlayers();
                 loadTotals();
+
+                // Setup for back button interception
+                appPageURL = location.href; // Store the current URL
+                // Push a new state to the history stack for the current page
+                history.pushState({ app_state: "active_session" }, document.title, appPageURL);
+                window.addEventListener('popstate', handleAppBackButton);
+
             } else {
                 document.getElementById('login-page').style.display = 'block';
                 document.getElementById('app-page').style.display = 'none';
@@ -1118,24 +1126,55 @@
 
             if (enteredPassword === adminPassword) {
                 localStorage.setItem('isLoggedIn', 'true');
-                document.getElementById('login-page').style.display = 'none';
-                document.getElementById('app-page').style.display = 'block';
-                document.getElementById('players-table-container').style.display = 'block';
-                document.getElementById('new-game-section').style.display = 'none';
-                loadPlayers();
-                loadTotals();
+                // Reload the page to trigger window.onload and proper setup
+                window.location.reload();
             } else {
                 loginError.textContent = "رمز عبور اشتباه است.";
             }
         }
 
-        function logout() {
+        function exitAppConfirmed() {
             localStorage.removeItem('isLoggedIn');
-            document.getElementById('app-page').style.display = 'none';
-            document.getElementById('login-page').style.display = 'block';
-            document.getElementById('admin-password').value = '';
-            document.getElementById('login-error').textContent = '';
+            window.removeEventListener('popstate', handleAppBackButton); // Clean up listener
+
+            document.body.innerHTML = `
+                <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; background:linear-gradient(135deg, #4b4b4b, #2f2f2f); color:#e0e0e0; font-family: 'Vazirmatn', sans-serif; font-size: 1.5rem; text-align:center; padding:20px;">
+                    <p>در حال خروج از برنامه...</p>
+                    <p style="font-size: 1rem; margin-top: 10px;">اگر برنامه به طور خودکار بسته نشد، لطفاً این پنجره را به صورت دستی ببندید.</p>
+                </div>`;
+            
+            // Attempt to close the window/PWA. This might not work in all browsers/PWA contexts.
+            setTimeout(() => {
+                window.open('', '_self').close();
+            }, 100);
         }
+
+        function logout() {
+            showCustomAlert(
+                "آیا مطمئن هستید که می‌خواهید از برنامه خارج شوید؟",
+                exitAppConfirmed,
+                null // No special action on cancel, alert will just close
+            );
+        }
+
+        function handleAppBackButton(event) {
+            // Check if the app page is visible and user is logged in
+            if (document.getElementById('app-page').style.display === 'block' &&
+                localStorage.getItem('isLoggedIn') === 'true') {
+                
+                // Show confirmation alert
+                showCustomAlert(
+                    "آیا مطمئن هستید که می‌خواهید از برنامه خارج شوید؟",
+                    exitAppConfirmed, // If confirmed, exit app
+                    () => { // If cancelled
+                        // Re-push the state for the app page to prevent actual back navigation
+                        history.pushState({ app_state: "active_session" }, document.title, appPageURL);
+                        // The alert will be closed by showCustomAlert's own cancel logic
+                    }
+                );
+            }
+        }
+
 
         function openModal(modalId) {
             document.getElementById(modalId).style.display = 'block';
@@ -1370,15 +1409,28 @@
             document.getElementById('players-table-container').style.display = 'block';
         }
 
-        function showCustomAlert(message, confirmCallback) {
+        // Modified showCustomAlert to accept an optional cancelCallback
+        function showCustomAlert(message, confirmCallback, cancelCallback = null) {
             document.getElementById('alert-message').textContent = message;
             const confirmBtn = document.getElementById('confirm-alert-btn');
+            const cancelBtn = document.querySelector('#custom-alert-modal .cancel-btn');
+
             confirmBtn.onclick = () => {
-                confirmCallback();
+                if (typeof confirmCallback === 'function') {
+                    confirmCallback();
+                }
                 closeCustomAlert();
+            };
+
+            cancelBtn.onclick = () => {
+                if (typeof cancelCallback === 'function') {
+                    cancelCallback(); // Execute custom cancel logic
+                }
+                closeCustomAlert(); // Always close the alert
             };
             document.getElementById('custom-alert-modal').style.display = 'flex';
         }
+
 
         function closeCustomAlert() {
             document.getElementById('custom-alert-modal').style.display = 'none';
@@ -1402,7 +1454,8 @@
                 }
             });
             if (event.target === document.getElementById('custom-alert-modal')) {
-                closeCustomAlert();
+                // Allow showCustomAlert to handle its own closing via buttons
+                // closeCustomAlert();
             }
         }
     </script>
