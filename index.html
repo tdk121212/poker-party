@@ -260,7 +260,7 @@
         #totals-table-container {
             margin-top: 20px;
             margin-bottom: 80px;
-            overflow-x: auto;
+            overflow-x: auto; 
         }
 
         #totals-table {
@@ -528,8 +528,6 @@
             }
         }
 
-        #record-deposit-modal input[type="text"],
-        #record-chips-modal input[type="text"],
         #convert-chips-modal input[type="text"],
         #edit-player-modal input[type="text"] {
             color: #000000;
@@ -937,11 +935,16 @@
         <div class="modal-content">
             <span class="close" onclick="closeModal('record-deposit-modal')">×</span>
             <h2>ثبت واریزی</h2>
+            <label for="deposit-player-select">بازیکن:</label>
             <div class="custom-select" id="deposit-player-select">
                 <div class="select-display">انتخاب بازیکن</div>
                 <ul class="select-options"></ul>
             </div>
-            <input type="text" inputmode="numeric" id="deposit-amount" placeholder="میزان واریزی" oninput="formatNumberInput(this)">
+            <label for="deposit-amount-select">میزان واریزی:</label>
+            <div class="custom-select" id="deposit-amount-select">
+                <div class="select-display">انتخاب میزان واریزی</div>
+                <ul class="select-options"></ul>
+            </div>
             <button onclick="recordDeposit()">ثبت</button>
         </div>
     </div>
@@ -950,11 +953,16 @@
         <div class="modal-content">
             <span class="close" onclick="closeModal('record-chips-modal')">×</span>
             <h2>ثبت چیپ دریافتی</h2>
+            <label for="chips-player-select">بازیکن:</label>
             <div class="custom-select" id="chips-player-select">
                 <div class="select-display">انتخاب بازیکن</div>
                 <ul class="select-options"></ul>
             </div>
-            <input type="text" inputmode="numeric" id="chips-amount" placeholder="میزان چیپ" oninput="formatNumberInput(this)">
+            <label for="chips-amount-select">میزان چیپ:</label>
+            <div class="custom-select" id="chips-amount-select">
+                <div class="select-display">انتخاب میزان چیپ</div>
+                <ul class="select-options"></ul>
+            </div>
             <button onclick="recordChips()">ثبت</button>
         </div>
     </div>
@@ -963,6 +971,7 @@
         <div class="modal-content">
             <span class="close" onclick="closeModal('convert-chips-modal')">×</span>
             <h2>تبدیل چیپ به پول</h2>
+            <label for="convert-player-select">بازیکن:</label>
             <div class="custom-select" id="convert-player-select">
                 <div class="select-display">انتخاب بازیکن</div>
                 <ul class="select-options"></ul>
@@ -983,7 +992,6 @@
     <script>
         const adminPassword = "1234";
         let currentEditPlayerName = null;
-        let appPageURL; // برای ذخیره URL صفحه اصلی برنامه جهت مدیریت دکمه بازگشت
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -1011,7 +1019,7 @@
         }
 
         function parseFormattedNumber(value) {
-            return parseInt(value.replace(/,/g, '')) || 0;
+            return parseInt(String(value).replace(/,/g, '')) || 0;
         }
 
         function showSuccessMessage(message) {
@@ -1027,63 +1035,76 @@
         }
 
         function closeAllDropdowns() {
-            document.querySelectorAll('.select-options.show').forEach(options => {
+            document.querySelectorAll('.custom-select .select-options.show').forEach(options => {
                 options.classList.remove('show');
             });
         }
+        
+        document.addEventListener('click', (event) => {
+            if (!event.target.closest('.custom-select')) {
+                closeAllDropdowns();
+            }
+        });
+        document.addEventListener('touchstart', (event) => {
+            if (!event.target.closest('.custom-select')) {
+                closeAllDropdowns();
+            }
+        }, { passive: true });
 
-        function initializeCustomSelect(modalId) {
-            const customSelect = document.querySelector(`#${modalId} .custom-select`);
-            const selectDisplay = customSelect.querySelector('.select-display');
-            const selectOptions = customSelect.querySelector('.select-options');
 
-            const newSelectDisplay = selectDisplay.cloneNode(true);
-            selectDisplay.parentNode.replaceChild(newSelectDisplay, selectDisplay);
+        function initializeCustomSelect(selectElementId) {
+            const customSelect = document.getElementById(selectElementId);
+            if (!customSelect) {
+                console.error(`Custom select with ID ${selectElementId} not found.`);
+                return;
+            }
+            const selectDisplayElement = customSelect.querySelector('.select-display');
+            const selectOptionsElement = customSelect.querySelector('.select-options');
+
+            // Clone display and options elements to remove any previously attached listeners
+            const newSelectDisplay = selectDisplayElement.cloneNode(true);
+            selectDisplayElement.parentNode.replaceChild(newSelectDisplay, selectDisplayElement);
+
+            const newSelectOptions = selectOptionsElement.cloneNode(false); // Clone only structure, not children
+            selectOptionsElement.parentNode.replaceChild(newSelectOptions, selectOptionsElement);
+            // populate functions will add children to newSelectOptions
 
             let lastToggleTime = 0;
-            const toggleOptions = (e) => {
-                e.stopPropagation();
-                e.preventDefault();
+            newSelectDisplay.addEventListener('pointerdown', (e) => {
+                e.stopPropagation(); 
                 const now = Date.now();
                 if (now - lastToggleTime < 300) return;
                 lastToggleTime = now;
 
-                const isOpen = selectOptions.classList.contains('show');
-                closeAllDropdowns();
+                const isOpen = newSelectOptions.classList.contains('show');
                 if (!isOpen) {
-                    selectOptions.classList.add('show');
+                    closeAllDropdowns(); 
+                    newSelectOptions.classList.add('show');
+                } else {
+                    newSelectOptions.classList.remove('show');
                 }
-            };
+            }, { passive: false });
 
-            newSelectDisplay.addEventListener('pointerdown', toggleOptions, { passive: false });
-
-            selectOptions.addEventListener('click', (e) => {
+            newSelectOptions.addEventListener('click', (e) => {
                 if (e.target.tagName === 'LI') {
                     const value = e.target.getAttribute('data-value');
                     newSelectDisplay.textContent = e.target.textContent;
                     customSelect.setAttribute('data-selected', value);
-                    selectOptions.classList.remove('show');
+                    newSelectOptions.classList.remove('show');
                 }
             });
-
-            document.addEventListener('click', (e) => {
-                if (!customSelect.contains(e.target)) {
-                    selectOptions.classList.remove('show');
-                }
-            });
-
-            document.addEventListener('touchstart', (e) => {
-                if (!customSelect.contains(e.target)) {
-                    selectOptions.classList.remove('show');
-                }
-            }, { passive: true });
         }
 
-        function populatePlayerSelect(modalId) {
-            const customSelect = document.querySelector(`#${modalId} .custom-select`);
-            const selectOptions = customSelect.querySelector('.select-options');
+
+        function populatePlayerSelect(selectElementId) {
+            const customSelect = document.getElementById(selectElementId);
+            if (!customSelect) {
+                console.error(`Player select with ID ${selectElementId} not found for populating.`);
+                return;
+            }
+            const selectOptions = customSelect.querySelector('.select-options'); 
             const players = getPlayers();
-            selectOptions.innerHTML = '';
+            selectOptions.innerHTML = ''; 
 
             players.forEach(player => {
                 const li = document.createElement('li');
@@ -1096,6 +1117,49 @@
             customSelect.removeAttribute('data-selected');
         }
 
+        function populateDepositAmountSelect(selectElementId) {
+            const customSelect = document.getElementById(selectElementId);
+            if (!customSelect) {
+                console.error(`Deposit amount select with ID ${selectElementId} not found for populating.`);
+                return;
+            }
+            const selectOptions = customSelect.querySelector('.select-options');
+            const amounts = [1000000, 2000000, 3000000, 4000000, 5000000];
+            selectOptions.innerHTML = ''; 
+
+            amounts.forEach(amount => {
+                const li = document.createElement('li');
+                li.setAttribute('data-value', amount);
+                li.textContent = formatNumber(amount);
+                selectOptions.appendChild(li);
+            });
+
+            customSelect.querySelector('.select-display').textContent = 'انتخاب میزان واریزی';
+            customSelect.removeAttribute('data-selected');
+        }
+
+        function populateChipsAmountSelect(selectElementId) {
+            const customSelect = document.getElementById(selectElementId);
+            if (!customSelect) {
+                console.error(`Chips amount select with ID ${selectElementId} not found for populating.`);
+                return;
+            }
+            const selectOptions = customSelect.querySelector('.select-options');
+            const amounts = [100000, 200000, 300000, 400000, 500000, 600000, 700000, 800000, 900000, 1000000];
+            selectOptions.innerHTML = ''; 
+
+            amounts.forEach(amount => {
+                const li = document.createElement('li');
+                li.setAttribute('data-value', amount);
+                li.textContent = formatNumber(amount);
+                selectOptions.appendChild(li);
+            });
+
+            customSelect.querySelector('.select-display').textContent = 'انتخاب میزان چیپ';
+            customSelect.removeAttribute('data-selected');
+        }
+
+
         window.onload = function() {
             const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
             if (isLoggedIn) {
@@ -1106,13 +1170,6 @@
                 document.getElementById('custom-alert-modal').style.display = 'none';
                 loadPlayers();
                 loadTotals();
-
-                // Setup for back button interception
-                appPageURL = location.href; // Store the current URL
-                // Push a new state to the history stack for the current page
-                history.pushState({ app_state: "active_session" }, document.title, appPageURL);
-                window.addEventListener('popstate', handleAppBackButton);
-
             } else {
                 document.getElementById('login-page').style.display = 'block';
                 document.getElementById('app-page').style.display = 'none';
@@ -1126,61 +1183,42 @@
 
             if (enteredPassword === adminPassword) {
                 localStorage.setItem('isLoggedIn', 'true');
-                // Reload the page to trigger window.onload and proper setup
-                window.location.reload();
+                document.getElementById('login-page').style.display = 'none';
+                document.getElementById('app-page').style.display = 'block';
+                document.getElementById('players-table-container').style.display = 'block';
+                document.getElementById('new-game-section').style.display = 'none';
+                loadPlayers();
+                loadTotals();
             } else {
                 loginError.textContent = "رمز عبور اشتباه است.";
             }
         }
 
-        function exitAppConfirmed() {
-            localStorage.removeItem('isLoggedIn');
-            window.removeEventListener('popstate', handleAppBackButton); // Clean up listener
-
-            document.body.innerHTML = `
-                <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; background:linear-gradient(135deg, #4b4b4b, #2f2f2f); color:#e0e0e0; font-family: 'Vazirmatn', sans-serif; font-size: 1.5rem; text-align:center; padding:20px;">
-                    <p>در حال خروج از برنامه...</p>
-                    <p style="font-size: 1rem; margin-top: 10px;">اگر برنامه به طور خودکار بسته نشد، لطفاً این پنجره را به صورت دستی ببندید.</p>
-                </div>`;
-            
-            // Attempt to close the window/PWA. This might not work in all browsers/PWA contexts.
-            setTimeout(() => {
-                window.open('', '_self').close();
-            }, 100);
-        }
-
         function logout() {
-            showCustomAlert(
-                "آیا مطمئن هستید که می‌خواهید از برنامه خارج شوید؟",
-                exitAppConfirmed,
-                null // No special action on cancel, alert will just close
-            );
+            localStorage.removeItem('isLoggedIn');
+            document.getElementById('app-page').style.display = 'none';
+            document.getElementById('login-page').style.display = 'block';
+            document.getElementById('admin-password').value = '';
+            document.getElementById('login-error').textContent = '';
         }
-
-        function handleAppBackButton(event) {
-            // Check if the app page is visible and user is logged in
-            if (document.getElementById('app-page').style.display === 'block' &&
-                localStorage.getItem('isLoggedIn') === 'true') {
-                
-                // Show confirmation alert
-                showCustomAlert(
-                    "آیا مطمئن هستید که می‌خواهید از برنامه خارج شوید؟",
-                    exitAppConfirmed, // If confirmed, exit app
-                    () => { // If cancelled
-                        // Re-push the state for the app page to prevent actual back navigation
-                        history.pushState({ app_state: "active_session" }, document.title, appPageURL);
-                        // The alert will be closed by showCustomAlert's own cancel logic
-                    }
-                );
-            }
-        }
-
 
         function openModal(modalId) {
             document.getElementById(modalId).style.display = 'block';
-            if (modalId === 'record-deposit-modal' || modalId === 'record-chips-modal' || modalId === 'convert-chips-modal') {
-                populatePlayerSelect(modalId);
-                initializeCustomSelect(modalId);
+            if (modalId === 'record-deposit-modal') {
+                initializeCustomSelect('deposit-player-select');
+                populatePlayerSelect('deposit-player-select'); 
+                
+                initializeCustomSelect('deposit-amount-select'); 
+                populateDepositAmountSelect('deposit-amount-select');
+            } else if (modalId === 'record-chips-modal') {
+                initializeCustomSelect('chips-player-select');
+                populatePlayerSelect('chips-player-select');
+
+                initializeCustomSelect('chips-amount-select');
+                populateChipsAmountSelect('chips-amount-select');
+            } else if (modalId === 'convert-chips-modal') {
+                initializeCustomSelect('convert-player-select');
+                populatePlayerSelect('convert-player-select');
             }
         }
 
@@ -1331,10 +1369,12 @@
         }
 
         function recordDeposit() {
-            const customSelect = document.getElementById('deposit-player-select');
-            const playerName = customSelect.getAttribute('data-selected');
-            const depositAmountInput = document.getElementById('deposit-amount');
-            const depositAmount = parseFormattedNumber(depositAmountInput.value);
+            const playerSelect = document.getElementById('deposit-player-select');
+            const playerName = playerSelect.getAttribute('data-selected');
+
+            const amountSelect = document.getElementById('deposit-amount-select');
+            const depositAmountRaw = amountSelect.getAttribute('data-selected');
+            const depositAmount = parseFormattedNumber(depositAmountRaw);
 
             if (playerName && depositAmount > 0) {
                 const players = getPlayers();
@@ -1347,17 +1387,32 @@
                     });
                     savePlayers(players);
                     loadPlayers();
-                    depositAmountInput.value = '';
+                    
+                    playerSelect.querySelector('.select-display').textContent = 'انتخاب بازیکن';
+                    playerSelect.removeAttribute('data-selected');
+                    amountSelect.querySelector('.select-display').textContent = 'انتخاب میزان واریزی';
+                    amountSelect.removeAttribute('data-selected');
+
                     closeModal('record-deposit-modal');
+                }
+            } else {
+                 if (!playerName && !(depositAmount > 0)) {
+                    alert("لطفا بازیکن و میزان واریزی را انتخاب کنید.");
+                } else if (!playerName) {
+                    alert("لطفا بازیکن را انتخاب کنید.");
+                } else if (!(depositAmount > 0)) {
+                    alert("لطفا میزان واریزی را انتخاب کنید.");
                 }
             }
         }
 
         function recordChips() {
-            const customSelect = document.getElementById('chips-player-select');
-            const playerName = customSelect.getAttribute('data-selected');
-            const chipsAmountInput = document.getElementById('chips-amount');
-            const chipsAmount = parseFormattedNumber(chipsAmountInput.value);
+            const playerSelect = document.getElementById('chips-player-select');
+            const playerName = playerSelect.getAttribute('data-selected');
+
+            const amountSelect = document.getElementById('chips-amount-select');
+            const chipsAmountRaw = amountSelect.getAttribute('data-selected');
+            const chipsAmount = parseFormattedNumber(chipsAmountRaw);
 
             if (playerName && chipsAmount > 0) {
                 const players = getPlayers();
@@ -1370,8 +1425,21 @@
                     });
                     savePlayers(players);
                     loadPlayers();
-                    chipsAmountInput.value = '';
+                    
+                    playerSelect.querySelector('.select-display').textContent = 'انتخاب بازیکن';
+                    playerSelect.removeAttribute('data-selected');
+                    amountSelect.querySelector('.select-display').textContent = 'انتخاب میزان چیپ';
+                    amountSelect.removeAttribute('data-selected');
+                    
                     closeModal('record-chips-modal');
+                }
+            } else {
+                 if (!playerName && !(chipsAmount > 0)) {
+                    alert("لطفا بازیکن و میزان چیپ را انتخاب کنید.");
+                } else if (!playerName) {
+                    alert("لطفا بازیکن را انتخاب کنید.");
+                } else if (!(chipsAmount > 0)) {
+                    alert("لطفا میزان چیپ را انتخاب کنید.");
                 }
             }
         }
@@ -1394,6 +1462,8 @@
                     savePlayers(players);
                     loadPlayers();
                     convertAmountInput.value = '';
+                    customSelect.querySelector('.select-display').textContent = 'انتخاب بازیکن';
+                    customSelect.removeAttribute('data-selected');
                     closeModal('convert-chips-modal');
                 }
             }
@@ -1409,28 +1479,15 @@
             document.getElementById('players-table-container').style.display = 'block';
         }
 
-        // Modified showCustomAlert to accept an optional cancelCallback
-        function showCustomAlert(message, confirmCallback, cancelCallback = null) {
+        function showCustomAlert(message, confirmCallback) {
             document.getElementById('alert-message').textContent = message;
             const confirmBtn = document.getElementById('confirm-alert-btn');
-            const cancelBtn = document.querySelector('#custom-alert-modal .cancel-btn');
-
             confirmBtn.onclick = () => {
-                if (typeof confirmCallback === 'function') {
-                    confirmCallback();
-                }
+                confirmCallback();
                 closeCustomAlert();
-            };
-
-            cancelBtn.onclick = () => {
-                if (typeof cancelCallback === 'function') {
-                    cancelCallback(); // Execute custom cancel logic
-                }
-                closeCustomAlert(); // Always close the alert
             };
             document.getElementById('custom-alert-modal').style.display = 'flex';
         }
-
 
         function closeCustomAlert() {
             document.getElementById('custom-alert-modal').style.display = 'none';
@@ -1454,8 +1511,7 @@
                 }
             });
             if (event.target === document.getElementById('custom-alert-modal')) {
-                // Allow showCustomAlert to handle its own closing via buttons
-                // closeCustomAlert();
+                closeCustomAlert();
             }
         }
     </script>
