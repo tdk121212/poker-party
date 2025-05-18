@@ -230,6 +230,12 @@
             return Number(number).toLocaleString('en-US');
         }
 
+        function formatTime(time) {
+            const [date, timePart] = time.split(' ');
+            const [, month, day] = date.split('-');
+            return `${month}-${day} ${timePart}`;
+        }
+
         function loadTransactions() {
             const urlParams = new URLSearchParams(window.location.search);
             const playerName = decodeURIComponent(urlParams.get('name'));
@@ -247,7 +253,7 @@
                     row.innerHTML = `
                         <td>واریزی</td>
                         <td class="positive-credit">${formatNumber(deposit.amount)}</td>
-                        <td>${deposit.time}</td>
+                        <td>${formatTime(deposit.time)}</td>
                     `;
                 });
 
@@ -256,7 +262,7 @@
                     row.innerHTML = `
                         <td>چیپ دریافتی</td>
                         <td class="negative-credit">${formatNumber(chips.amount)}</td>
-                        <td>${chips.time}</td>
+                        <td>${formatTime(chips.time)}</td>
                     `;
                 });
 
@@ -265,7 +271,7 @@
                     row.innerHTML = `
                         <td>تبدیل چیپ</td>
                         <td class="positive-credit">${formatNumber(converted.amount)}</td>
-                        <td>${converted.time}</td>
+                        <td>${formatTime(converted.time)}</td>
                     `;
                 });
             }
