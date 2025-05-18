@@ -260,13 +260,14 @@
         #totals-table-container {
             margin-top: 20px;
             margin-bottom: 80px;
+            overflow-x: auto; /* Added to allow horizontal scrolling for the totals table if needed */
         }
 
         #totals-table {
-            width: auto;
-            min-width: 450px;
-            max-width: 100%;
-            margin: 0 auto;
+            width: auto; /* Allow table to size to content */
+            min-width: 550px; /* Adjusted for four columns */
+            max-width: 100%; /* Don't exceed container */
+            margin: 0 auto; /* Center the table if it's narrower than container */
         }
 
         #totals-table th, #totals-table td {
@@ -676,7 +677,7 @@
             }
 
             #totals-table {
-                min-width: 350px;
+                min-width: 450px; /* Adjusted for four columns */
             }
 
             #totals-table th, #totals-table td {
@@ -775,7 +776,7 @@
             }
 
             #totals-table {
-                min-width: 300px;
+                min-width: 400px; /* Adjusted for four columns */
             }
 
             #totals-table th, #totals-table td {
@@ -874,6 +875,7 @@
                             <th>تعداد بازیکنان میز</th>
                             <th>مجموع واریزی</th>
                             <th>مجموع چیپ موجود در بازی</th>
+                            <th>مجموع اعتبار باقیمانده</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -881,6 +883,7 @@
                             <td id="total-players">0</td>
                             <td id="total-deposits">0</td>
                             <td id="total-chips">0</td>
+                            <td id="total-remaining-credit">0</td>
                         </tr>
                     </tbody>
                 </table>
@@ -1166,13 +1169,24 @@
         function loadTotals() {
             const players = getPlayers();
             const totalPlayers = players.length;
-            const totalDeposits = players.reduce((sum, player) => sum + player.deposits.reduce((depSum, deposit) => depSum + deposit.amount, 0), 0);
-            const totalChips = players.reduce((sum, player) => sum + player.chipsReceived.reduce((chipSum, chips) => chipSum + chips.amount, 0), 0);
+            
+            const totalAllDeposits = players.reduce((sum, player) => 
+                sum + player.deposits.reduce((depSum, deposit) => depSum + deposit.amount, 0), 0);
+            
+            const totalAllChipsReceived = players.reduce((sum, player) => 
+                sum + player.chipsReceived.reduce((chipSum, chips) => chipSum + chips.amount, 0), 0);
+            
+            const totalAllChipsConverted = players.reduce((sum, player) => 
+                sum + player.chipsConverted.reduce((convertedSum, convertedItem) => convertedSum + convertedItem.amount, 0), 0);
+
+            const totalRemainingCredit = totalAllDeposits - totalAllChipsReceived + totalAllChipsConverted;
 
             document.getElementById('total-players').textContent = totalPlayers;
-            document.getElementById('total-deposits').textContent = formatNumber(totalDeposits);
-            document.getElementById('total-chips').textContent = formatNumber(totalChips);
+            document.getElementById('total-deposits').textContent = formatNumber(totalAllDeposits);
+            document.getElementById('total-chips').textContent = formatNumber(totalAllChipsReceived);
+            document.getElementById('total-remaining-credit').textContent = formatNumber(totalRemainingCredit);
         }
+
 
         function loadPlayers() {
             const players = getPlayers();
