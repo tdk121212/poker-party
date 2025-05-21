@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
@@ -6,7 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تاریخچه تراکنش‌های بازیکن</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap');
+        /* Define local Vazirmatn font using TTF */
+        @font-face {
+          font-family: 'Vazirmatn';
+          src: url('/poker-party/fonts/Vazirmatn-Regular.ttf') format('truetype');
+          font-weight: 400; /* Regular */
+          font-style: normal;
+          font-display: swap;
+        }
+        @font-face {
+          font-family: 'Vazirmatn';
+          src: url('/poker-party/fonts/Vazirmatn-Bold.ttf') format('truetype');
+          font-weight: 700; /* Bold */
+          font-style: normal;
+          font-display: swap;
+        }
 
         * {
             margin: 0;
@@ -192,76 +205,143 @@
             return Number(number).toLocaleString('en-US');
         }
 
-        function formatTime(time) {
-            if (!time || typeof time !== 'string' || time.trim() === '') {
-                const now = new Date();
-                const month = String(now.getMonth() + 1).padStart(2, '0');
-                const day = String(now.getDate()).padStart(2, '0');
-                const hours = String(now.getHours()).padStart(2, '0');
-                const minutes = String(now.getMinutes()).padStart(2, '0');
-                const seconds = String(now.getSeconds()).padStart(2, '0');
-                return `${month}-${day} ${hours}:${minutes}:${seconds}`;
-            }
-
+        function formatTime(timeString) {
+            if (!timeString) return '-';
             try {
-                const dateObj = new Date(time);
-                if (isNaN(dateObj)) return '-';
-                const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-                const day = String(dateObj.getDate()).padStart(2, '0');
-                const hours = String(dateObj.getHours()).padStart(2, '0');
-                const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-                const seconds = String(dateObj.getSeconds()).padStart(2, '0');
-                return `${month}-${day} ${hours}:${minutes}:${seconds}`;
-            } catch {
-                return '-';
+                // Attempt to parse assuming it might be a standard parsable format or already fa-IR
+                let dateObj;
+                // Check if it's a standard ISO or similar that Date.parse can handle well
+                if (timeString.includes('/') || timeString.includes(',')) { // Likely fa-IR or similar custom
+                    // Heuristic: if it has Persian comma, it's likely from fa-IR toLocaleString
+                    // We'll try to display it as is, or re-parse if needed.
+                    // For sorting, we convert to Date object. For display, direct string is often fine.
+                    // The challenge is if toLocaleString was used for storage, parsing it back reliably is hard.
+                    // Best to store ISO or timestamp, and format for display.
+                    // Given current code, we assume 'timeString' might be what `new Date().toLocaleString('fa-IR')` produced.
+                    // For display, we can just return it. For robust parsing to Date, it's tricky.
+                    return timeString; 
+                } else {
+                    dateObj = new Date(timeString);
+                }
+
+                if (!isNaN(dateObj)) {
+                    return dateObj.toLocaleString('fa-IR', { 
+                        year: 'numeric', month: '2-digit', day: '2-digit', 
+                        hour: '2-digit', minute: '2-digit', second: '2-digit',
+                        hour12: false 
+                    }).replace('، ', ' '); 
+                }
+            } catch (e) { /* ignore, use original string */ }
+            
+            return timeString; 
+        }
+
+        function getPlayersFromStorage() {
+            const players = localStorage.getItem('pokerPlayers');
+            if (!players) return [];
+            try {
+                const parsedPlayers = JSON.parse(players);
+                 return parsedPlayers.map(player => ({
+                    name: player.name,
+                    deposits: (player.deposits || []),
+                    chipsReceived: (player.chipsReceived || []),
+                    chipsConverted: (player.chipsConverted || []),
+                }));
+            } catch (e) {
+                console.error("Error parsing players from localStorage:", e);
+                return [];
             }
         }
+
+        // Helper to robustly convert stored time string to a sortable Date object or timestamp
+        function getSortableTime(timeString) {
+            if (!timeString) return 0; // Default for invalid/missing times
+
+            // Attempt to parse common formats. `toLocaleString('fa-IR')` is tricky.
+            // Example: "۱۴۰۲/۱۱/۲۳،‏ ۱۵:۴۰:۳۰"
+            // Standard Date.parse might fail. We need a more robust parser if this is the stored format.
+            // For now, we'll try a simple Date() constructor. If it was ISO or timestamp, it works.
+            // If it was a complex locale string, this might result in Invalid Date (NaN timestamp).
+            let date = new Date(timeString);
+            if (!isNaN(date.getTime())) {
+                return date.getTime();
+            }
+
+            // Basic attempt to parse "YYYY/MM/DD, HH:MM:SS" (assuming Persian numbers were converted or handled)
+            // This is a very simplified example and might need a proper library for robust parsing of fa-IR strings.
+            const parts = timeString.split(/[,\/\s:]+/); 
+            if (parts.length >= 3) { // year, month, day at least
+                // Assuming parts are [year, month, day, hour, minute, second] after splitting
+                // This needs conversion of Persian numerals to Western if they are stored as such.
+                // For simplicity, assuming Western numerals for parsing here.
+                const year = parseInt(parts[0]);
+                const month = parseInt(parts[1]) - 1; // JS months are 0-indexed
+                const day = parseInt(parts[2]);
+                const hour = parseInt(parts[3]) || 0;
+                const minute = parseInt(parts[4]) || 0;
+                const second = parseInt(parts[5]) || 0;
+                
+                if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+                    date = new Date(year, month, day, hour, minute, second);
+                    if (!isNaN(date.getTime())) {
+                        return date.getTime();
+                    }
+                }
+            }
+            return 0; // Fallback for unparseable strings
+        }
+
 
         function loadTransactions() {
             const urlParams = new URLSearchParams(window.location.search);
             const playerName = decodeURIComponent(urlParams.get('name'));
             document.getElementById('player-name').textContent = playerName;
 
-            const players = JSON.parse(localStorage.getItem('pokerPlayers') || '[]');
+            const players = getPlayersFromStorage();
             const player = players.find(p => p.name === playerName);
 
             const tableBody = document.querySelector('#transactions-table tbody');
             tableBody.innerHTML = '';
 
             if (player) {
-                player.deposits.forEach(deposit => {
-                    const row = tableBody.insertRow();
-                    row.innerHTML = `
-                        <td>واریزی</td>
-                        <td class="positive-credit">${formatNumber(deposit.amount)}</td>
-                        <td>${formatTime(deposit.time)}</td>
-                    `;
+                const allTransactions = [];
+
+                (player.deposits || []).forEach(deposit => {
+                    allTransactions.push({ type: 'واریزی', amount: deposit.amount, time: deposit.time, class: 'positive-credit' });
                 });
 
-                player.chipsReceived.forEach(chips => {
-                    const row = tableBody.insertRow();
-                    row.innerHTML = `
-                        <td>چیپ دریافتی</td>
-                        <td class="negative-credit">${formatNumber(chips.amount)}</td>
-                        <td>${formatTime(chips.time)}</td>
-                    `;
+                (player.chipsReceived || []).forEach(chips => {
+                    allTransactions.push({ type: 'چیپ دریافتی', amount: chips.amount, time: chips.time, class: 'negative-credit' });
                 });
 
-                player.chipsConverted.forEach(converted => {
+                (player.chipsConverted || []).forEach(converted => {
+                    allTransactions.push({ type: 'تبدیل چیپ', amount: converted.amount, time: converted.time, class: 'positive-credit' });
+                });
+
+                allTransactions.sort((a, b) => {
+                    const timeA = getSortableTime(a.time);
+                    const timeB = getSortableTime(b.time);
+                    return timeB - timeA; // Sort descending (most recent first)
+                });
+
+
+                allTransactions.forEach(transaction => {
                     const row = tableBody.insertRow();
                     row.innerHTML = `
-                        <td>تبدیل چیپ</td>
-                        <td class="positive-credit">${formatNumber(converted.amount)}</td>
-                        <td>${formatTime(converted.time)}</td>
+                        <td>${transaction.type}</td>
+                        <td class="${transaction.class}">${formatNumber(transaction.amount)}</td>
+                        <td>${formatTime(transaction.time)}</td>
                     `;
                 });
             }
         }
 
+
         window.onload = function() {
             const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
             if (!isLoggedIn) {
-                window.location.href = '/poker-party/index.html';
+                // Redirect to login page, ensure full path for GitHub Pages
+                window.location.href = '/poker-party/index.html'; 
             } else {
                 loadTransactions();
             }
