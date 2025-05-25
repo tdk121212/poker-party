@@ -1002,13 +1002,15 @@
         </div>
     </div>
 
-    <script>
+        <script>
         const adminPassword = "1234";
         let currentEditPlayerName = null;
+        let globalDefaultDeposit = 0; // متغیر گلوبال برای واریزی پیش‌فرض
+        let globalDefaultChips = 0;   // متغیر گلوبال برای چیپ پیش‌فرض
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/poker-party/service-worker.js') 
+                navigator.serviceWorker.register('/poker-party/service-worker.js')
                     .then(registration => {
                         console.log('Service Worker registered with scope:', registration.scope);
                     })
@@ -1028,6 +1030,12 @@
                 input.value = Number(value).toLocaleString('en-US');
             } else if (value === '') {
                  input.value = '';
+            }
+            // به‌روزرسانی متغیرهای گلوبال اگر این اینپوت‌ها مربوط به پیش‌فرض‌ها باشند
+            if (input.id === 'default-deposit') {
+                globalDefaultDeposit = parseFormattedNumber(input.value);
+            } else if (input.id === 'default-chips') {
+                globalDefaultChips = parseFormattedNumber(input.value);
             }
         }
 
@@ -1055,7 +1063,7 @@
                 options.classList.remove('show');
             });
         }
-        
+
         document.addEventListener('click', (event) => {
             if (!event.target.closest('.custom-select')) {
                 closeAllDropdowns();
@@ -1080,19 +1088,19 @@
             const newSelectDisplay = selectDisplayElement.cloneNode(true);
             selectDisplayElement.parentNode.replaceChild(newSelectDisplay, selectDisplayElement);
 
-            const newSelectOptions = selectOptionsElement.cloneNode(false); 
+            const newSelectOptions = selectOptionsElement.cloneNode(false);
             selectOptionsElement.parentNode.replaceChild(newSelectOptions, selectOptionsElement);
-            
+
             let lastToggleTime = 0;
             newSelectDisplay.addEventListener('pointerdown', (e) => {
-                e.stopPropagation(); 
+                e.stopPropagation();
                 const now = Date.now();
-                if (now - lastToggleTime < 300) return; 
+                if (now - lastToggleTime < 300) return;
                 lastToggleTime = now;
 
                 const isOpen = newSelectOptions.classList.contains('show');
                 if (!isOpen) {
-                    closeAllDropdowns(); 
+                    closeAllDropdowns();
                     newSelectOptions.classList.add('show');
                 } else {
                     newSelectOptions.classList.remove('show');
@@ -1113,9 +1121,9 @@
         function populatePlayerSelect(selectElementId) {
             const customSelect = document.getElementById(selectElementId);
             if (!customSelect) return;
-            const selectOptions = customSelect.querySelector('.select-options'); 
+            const selectOptions = customSelect.querySelector('.select-options');
             const players = getPlayers();
-            selectOptions.innerHTML = ''; 
+            selectOptions.innerHTML = '';
 
             players.forEach(player => {
                 const li = document.createElement('li');
@@ -1133,7 +1141,7 @@
             if (!customSelect) return;
             const selectOptions = customSelect.querySelector('.select-options');
             const amounts = [1000000, 2000000, 3000000, 4000000, 5000000];
-            selectOptions.innerHTML = ''; 
+            selectOptions.innerHTML = '';
 
             amounts.forEach(amount => {
                 const li = document.createElement('li');
@@ -1151,7 +1159,7 @@
             if (!customSelect) return;
             const selectOptions = customSelect.querySelector('.select-options');
             const amounts = [100000, 200000, 300000, 400000, 500000, 600000, 700000, 800000, 900000, 1000000];
-            selectOptions.innerHTML = ''; 
+            selectOptions.innerHTML = '';
 
             amounts.forEach(amount => {
                 const li = document.createElement('li');
@@ -1175,6 +1183,12 @@
                 document.getElementById('custom-alert-modal').style.display = 'none';
                 loadPlayers();
                 loadTotals();
+                // بازیابی مقادیر پیش‌فرض از localStorage در صورت وجود (اختیاری، برای ماندگاری بیشتر)
+                // globalDefaultDeposit = parseInt(localStorage.getItem('globalDefaultDeposit')) || 0;
+                // globalDefaultChips = parseInt(localStorage.getItem('globalDefaultChips')) || 0;
+                // document.getElementById('default-deposit').value = globalDefaultDeposit > 0 ? formatNumber(globalDefaultDeposit) : '';
+                // document.getElementById('default-chips').value = globalDefaultChips > 0 ? formatNumber(globalDefaultChips) : '';
+
             } else {
                 document.getElementById('login-page').style.display = 'block';
                 document.getElementById('app-page').style.display = 'none';
@@ -1201,6 +1215,11 @@
 
         function logout() {
             localStorage.removeItem('isLoggedIn');
+            // پاک کردن مقادیر پیش‌فرض هنگام خروج (اختیاری)
+            // localStorage.removeItem('globalDefaultDeposit');
+            // localStorage.removeItem('globalDefaultChips');
+            // globalDefaultDeposit = 0;
+            // globalDefaultChips = 0;
             document.getElementById('app-page').style.display = 'none';
             document.getElementById('login-page').style.display = 'block';
             document.getElementById('admin-password').value = '';
@@ -1210,11 +1229,11 @@
         function openModal(modalId) {
             const modalElement = document.getElementById(modalId);
             if (modalElement) modalElement.style.display = 'block';
-            
+
             if (modalId === 'record-deposit-modal') {
                 initializeCustomSelect('deposit-player-select');
-                populatePlayerSelect('deposit-player-select'); 
-                initializeCustomSelect('deposit-amount-select'); 
+                populatePlayerSelect('deposit-player-select');
+                initializeCustomSelect('deposit-amount-select');
                 populateDepositAmountSelect('deposit-amount-select');
             } else if (modalId === 'record-chips-modal') {
                 initializeCustomSelect('chips-player-select');
@@ -1257,23 +1276,26 @@
         function loadTotals() {
             const players = getPlayers();
             const totalPlayers = players.length;
-            
-            const totalAllDeposits = players.reduce((sum, player) => 
+
+            const totalAllDeposits = players.reduce((sum, player) =>
                 sum + (player.deposits ? player.deposits.reduce((depSum, deposit) => depSum + (deposit.amount || 0), 0) : 0), 0);
-            
-            const totalAllChipsReceived = players.reduce((sum, player) => 
+
+            const totalAllChipsReceived = players.reduce((sum, player) =>
                 sum + (player.chipsReceived ? player.chipsReceived.reduce((chipSum, chips) => chipSum + (chips.amount || 0), 0) : 0), 0);
-            
-            const totalAllChipsConverted = players.reduce((sum, player) => 
+
+            const totalAllChipsConverted = players.reduce((sum, player) =>
                 sum + (player.chipsConverted ? player.chipsConverted.reduce((convertedSum, convertedItem) => convertedSum + (convertedItem.amount || 0), 0) : 0), 0);
 
-            const totalCurrentlyInPlayChips = totalAllChipsReceived - totalAllChipsConverted; // This is a better representation for "مجموع چیپ موجود در بازی"
-            const totalRemainingCredit = totalAllDeposits - totalCurrentlyInPlayChips; // Or (totalDeposits + totalConverted) - totalChipsReceived
+            const totalCurrentlyInPlayChips = totalAllChipsReceived - totalAllChipsConverted;
+            const totalNetPlayerInvestment = totalAllDeposits - totalAllChipsConverted; // واریزی - تبدیل شده
+            // اعتبار باقیمانده کل باید صفر باشد اگر همه چیز درست باشد: (واریزی + تبدیل شده) - چیپ‌های دریافتی
+            const totalRemainingCreditSystem = totalAllDeposits + totalAllChipsConverted - totalAllChipsReceived;
+
 
             document.getElementById('total-players').textContent = totalPlayers;
             document.getElementById('total-deposits').textContent = formatNumber(totalAllDeposits);
-            document.getElementById('total-chips').textContent = formatNumber(totalCurrentlyInPlayChips);
-            document.getElementById('total-remaining-credit').textContent = formatNumber(totalRemainingCredit);
+            document.getElementById('total-chips').textContent = formatNumber(totalCurrentlyInPlayChips); // مجموع چیپ موجود در بازی
+            document.getElementById('total-remaining-credit').textContent = formatNumber(totalRemainingCreditSystem); // مجموع اعتبار باقیمانده سیستم
         }
 
 
@@ -1286,10 +1308,8 @@
                 const totalDeposit = player.deposits ? player.deposits.reduce((sum, deposit) => sum + (deposit.amount || 0), 0) : 0;
                 const totalChipsReceived = player.chipsReceived ? player.chipsReceived.reduce((sum, chips) => sum + (chips.amount || 0), 0) : 0;
                 const totalConverted = player.chipsConverted ? player.chipsConverted.reduce((sum, converted) => sum + (converted.amount || 0), 0) : 0;
-                
-                // اعتبار باقی مانده: کل واریزی - (کل چیپ دریافتی - کل چیپ تبدیل شده)
-                const netChipsUsed = totalChipsReceived - totalConverted;
-                const remainingCredit = totalDeposit - netChipsUsed;
+
+                const remainingCredit = totalDeposit + totalConverted - totalChipsReceived;
                 const creditClass = remainingCredit < 0 ? 'negative-credit' : 'positive-credit';
 
                 const row = tableBody.insertRow();
@@ -1316,21 +1336,23 @@
                     alert('بازیکنی با این نام از قبل وجود دارد.');
                     return;
                 }
-                const defaultDeposit = parseFormattedNumber(document.getElementById('default-deposit').value);
-                const defaultChips = parseFormattedNumber(document.getElementById('default-chips').value);
+                // استفاده از مقادیر گلوبال برای پیش‌فرض‌ها
+                const defaultDepositToUse = globalDefaultDeposit;
+                const defaultChipsToUse = globalDefaultChips;
                 const currentTime = new Date().toLocaleString('fa-IR', { hour12: false });
 
 
                 players.push({
                     name: playerName,
-                    deposits: defaultDeposit > 0 ? [{ amount: defaultDeposit, time: currentTime }] : [],
-                    chipsReceived: defaultChips > 0 ? [{ amount: defaultChips, time: currentTime }] : [],
+                    deposits: defaultDepositToUse > 0 ? [{ amount: defaultDepositToUse, time: currentTime }] : [],
+                    chipsReceived: defaultChipsToUse > 0 ? [{ amount: defaultChipsToUse, time: currentTime }] : [],
                     chipsConverted: []
                 });
                 savePlayers(players);
                 loadPlayers();
                 playerNameInput.value = '';
                 showSuccessMessage('بازیکن اضافه شد');
+                closeModal('add-player-modal'); // بستن مودال پس از اضافه کردن
             }
         }
 
@@ -1377,33 +1399,30 @@
                     if (playerIndex !== -1) {
                         currentPlayers[playerIndex].name = newName;
                         const currentTime = new Date().toLocaleString('fa-IR', { hour12: false });
-                        
-                        // This logic means any entry in edit fields will *replace* existing deposit/chips.
-                        // If you want to *add* to existing, this needs to change.
-                        // Currently, it's effectively a "reset and set new" for these fields if entered.
-                        if (depositAmountStr.trim() !== '') { // Only if something was entered
+
+                        if (depositAmountStr.trim() !== '') {
                              currentPlayers[playerIndex].deposits = depositAmount > 0 ? [{ amount: depositAmount, time: currentTime }] : [];
                         }
-                        if (chipsAmountStr.trim() !== '') { // Only if something was entered
+                        if (chipsAmountStr.trim() !== '') {
                              currentPlayers[playerIndex].chipsReceived = chipsAmount > 0 ? [{ amount: chipsAmount, time: currentTime }] : [];
                         }
-                        
+
                         savePlayers(currentPlayers);
                         loadPlayers();
                         closeModal('edit-player-modal');
-                        currentEditPlayerName = null; 
+                        currentEditPlayerName = null;
                     }
                 }
             );
         }
 
-        function deletePlayer(playerName) { 
+        function deletePlayer(playerName) {
             const players = getPlayers();
             const updatedPlayers = players.filter(player => player.name !== playerName);
             savePlayers(updatedPlayers);
             loadPlayers();
-            closeModal('edit-player-modal'); 
-            currentEditPlayerName = null; 
+            closeModal('edit-player-modal');
+            currentEditPlayerName = null;
         }
 
 
@@ -1427,7 +1446,7 @@
                     });
                     savePlayers(players);
                     loadPlayers();
-                    
+
                     playerSelect.querySelector('.select-display').textContent = 'انتخاب بازیکن';
                     playerSelect.removeAttribute('data-selected');
                     amountSelect.querySelector('.select-display').textContent = 'انتخاب میزان واریزی';
@@ -1466,12 +1485,12 @@
                     });
                     savePlayers(players);
                     loadPlayers();
-                    
+
                     playerSelect.querySelector('.select-display').textContent = 'انتخاب بازیکن';
                     playerSelect.removeAttribute('data-selected');
                     amountSelect.querySelector('.select-display').textContent = 'انتخاب میزان چیپ';
                     amountSelect.removeAttribute('data-selected');
-                    
+
                     closeModal('record-chips-modal');
                 }
             } else {
@@ -1520,11 +1539,22 @@
         }
 
         function openNewGameSection() {
+            // مقادیر پیش‌فرض فعلی را در فیلدها نمایش بده
+            document.getElementById('default-deposit').value = globalDefaultDeposit > 0 ? formatNumber(globalDefaultDeposit) : '';
+            document.getElementById('default-chips').value = globalDefaultChips > 0 ? formatNumber(globalDefaultChips) : '';
+
             document.getElementById('new-game-section').style.display = 'block';
             document.getElementById('players-table-container').style.display = 'none';
         }
 
         function closeNewGameSection() {
+            // هنگام بستن مودال "شروع بازی جدید"، مقادیر وارد شده را در متغیرهای گلوبال ذخیره کن
+            globalDefaultDeposit = parseFormattedNumber(document.getElementById('default-deposit').value);
+            globalDefaultChips = parseFormattedNumber(document.getElementById('default-chips').value);
+            // ذخیره در localStorage برای ماندگاری (اختیاری)
+            // localStorage.setItem('globalDefaultDeposit', globalDefaultDeposit);
+            // localStorage.setItem('globalDefaultChips', globalDefaultChips);
+
             document.getElementById('new-game-section').style.display = 'none';
             document.getElementById('players-table-container').style.display = 'block';
         }
@@ -1532,11 +1562,11 @@
         function showCustomAlert(message, confirmCallback) {
             document.getElementById('alert-message').textContent = message;
             const confirmBtn = document.getElementById('confirm-alert-btn');
-            
+
             const newConfirmBtn = confirmBtn.cloneNode(true);
             confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-            
-            newConfirmBtn.onclick = () => { 
+
+            newConfirmBtn.onclick = () => {
                 if(confirmCallback) confirmCallback();
                 closeCustomAlert();
             };
@@ -1550,11 +1580,16 @@
 
         function confirmClearPlayers() {
             savePlayers([]);
-            loadPlayers(); 
-            document.getElementById('default-deposit').value = ''; 
-            document.getElementById('default-chips').value = '';
+            loadPlayers();
+            // مقادیر پیش‌فرض را بعد از پاک کردن بازیکنان هم در متغیرهای گلوبال ذخیره کن
+            globalDefaultDeposit = parseFormattedNumber(document.getElementById('default-deposit').value);
+            globalDefaultChips = parseFormattedNumber(document.getElementById('default-chips').value);
+            // localStorage.setItem('globalDefaultDeposit', globalDefaultDeposit);
+            // localStorage.setItem('globalDefaultChips', globalDefaultChips);
+
             showSuccessMessage('تمام اطلاعات بازیکنان پاک شد.');
-            closeNewGameSection(); // Also close the new game section after clearing
+            // نیازی به بستن مودال نیست، چون کاربر ممکن است بخواهد مقادیر پیش‌فرض جدیدی تنظیم کند
+            // closeNewGameSection(); // این خط را حذف یا کامنت کنید
         }
 
 
@@ -1562,10 +1597,15 @@
             const modals = document.querySelectorAll('.modal');
             modals.forEach(modal => {
                 if (event.target === modal) {
-                    modal.style.display = "none";
+                    // اگر مودال "شروع بازی جدید" با کلیک بیرون بسته شد، مقادیر را ذخیره کن
                     if (modal.id === 'new-game-section') {
+                        globalDefaultDeposit = parseFormattedNumber(document.getElementById('default-deposit').value);
+                        globalDefaultChips = parseFormattedNumber(document.getElementById('default-chips').value);
+                        // localStorage.setItem('globalDefaultDeposit', globalDefaultDeposit);
+                        // localStorage.setItem('globalDefaultChips', globalDefaultChips);
                         document.getElementById('players-table-container').style.display = 'block';
                     }
+                    modal.style.display = "none";
                 }
             });
             if (event.target === document.getElementById('custom-alert-modal')) {
