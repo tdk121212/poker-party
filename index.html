@@ -1584,14 +1584,15 @@
             // مقادیر پیش‌فرض را بعد از پاک کردن بازیکنان هم در متغیرهای گلوبال ذخیره کن
             globalDefaultDeposit = parseFormattedNumber(document.getElementById('default-deposit').value);
             globalDefaultChips = parseFormattedNumber(document.getElementById('default-chips').value);
-            // localStorage.setItem('globalDefaultDeposit', globalDefaultDeposit);
-            // localStorage.setItem('globalDefaultChips', globalDefaultChips);
+            // اگر از localStorage استفاده می‌کنید، آن را هم به‌روز کنید:
+            // localStorage.setItem(DEFAULT_DEPOSIT_KEY, globalDefaultDeposit);
+            // localStorage.setItem(DEFAULT_CHIPS_KEY, globalDefaultChips);
 
             showSuccessMessage('تمام اطلاعات بازیکنان پاک شد.');
-            // نیازی به بستن مودال نیست، چون کاربر ممکن است بخواهد مقادیر پیش‌فرض جدیدی تنظیم کند
-            // closeNewGameSection(); // این خط را حذف یا کامنت کنید
+            
+            // اضافه کردن این خط برای بستن مودال و نمایش جدول بازیکنان
+            closeNewGameSection(); 
         }
-
 
         window.onclick = function(event) {
             const modals = document.querySelectorAll('.modal');
