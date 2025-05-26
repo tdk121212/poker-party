@@ -1334,11 +1334,12 @@
                 const players = getPlayers();
                 if (players.some(p => p.name === playerName)) {
                     alert('بازیکنی با این نام از قبل وجود دارد.');
+                    playerNameInput.focus(); // فوکوس روی اینپوت برای اصلاح
                     return;
                 }
                 // استفاده از مقادیر گلوبال برای پیش‌فرض‌ها
-                const defaultDepositToUse = globalDefaultDeposit;
-                const defaultChipsToUse = globalDefaultChips;
+                const defaultDepositToUse = globalDefaultDeposit; // یا خواندن از localStorage اگر از آن روش استفاده می‌کنید
+                const defaultChipsToUse = globalDefaultChips;   // یا خواندن از localStorage
                 const currentTime = new Date().toLocaleString('fa-IR', { hour12: false });
 
 
@@ -1350,9 +1351,13 @@
                 });
                 savePlayers(players);
                 loadPlayers();
-                playerNameInput.value = '';
-                showSuccessMessage('بازیکن اضافه شد');
-                closeModal('add-player-modal'); // بستن مودال پس از اضافه کردن
+                playerNameInput.value = ''; // پاک کردن فیلد نام بازیکن برای ورود نفر بعدی
+                playerNameInput.focus();    // فوکوس روی فیلد نام بازیکن برای ورود نفر بعدی
+                showSuccessMessage('بازیکن ' + playerName + ' اضافه شد'); // نمایش نام بازیکن اضافه شده
+                // closeModal('add-player-modal'); // <-- این خط حذف یا کامنت می‌شود
+            } else {
+                alert('نام بازیکن نمی‌تواند خالی باشد.');
+                playerNameInput.focus();
             }
         }
 
