@@ -43,11 +43,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>مدیریت بازی پوکر خانگی</title>
-    <!-- PWA: Link to manifest.json -->
     <link rel="manifest" href="/poker-party/manifest.json">
-    <!-- PWA: Apple Touch Icon -->
     <link rel="apple-touch-icon" href="/poker-party/icons/icon-192x192.png">
-    <!-- PWA: Theme Color -->
     <meta name="theme-color" content="#6a5acd">
     <style>
         /* Define local Vazirmatn font using TTF */
@@ -193,7 +190,6 @@
 
         td {
             background: rgba(255, 255, 255, 0.15);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
             color: #1a1a1a;
             font-size: 1.3rem;
             font-weight: 700;
@@ -643,6 +639,32 @@
             opacity: 1;
         }
 
+        /* Styles for update notification */
+        #update-notification {
+            position: fixed;
+            bottom: 80px; /* بالای نوار ناوبری پایین */
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(45deg, #4CAF50, #8BC34A);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            display: none; /* مخفی در ابتدا */
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        #update-notification:hover {
+            transform: translateX(-50%) translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+
+
         @media (max-width: 768px) {
             body {
                 padding: 8px;
@@ -756,6 +778,11 @@
                 padding: 10px;
                 font-size: 0.9rem;
             }
+            #update-notification {
+                bottom: 70px;
+                padding: 10px 15px;
+                font-size: 0.9rem;
+            }
         }
 
         @media (max-width: 600px) {
@@ -823,6 +850,11 @@
 
             .alert-content {
                 max-width: 300px;
+            }
+            #update-notification {
+                bottom: 60px;
+                padding: 8px 12px;
+                font-size: 0.8rem;
             }
         }
     </style>
@@ -1003,23 +1035,74 @@
         </div>
     </div>
 
+    <div id="update-notification" style="display: none;">
+        یک به‌روزرسانی جدید در دسترس است! برای اعمال، اینجا کلیک کنید.
+    </div>
+
         <script>
         const adminPassword = "1234";
         let currentEditPlayerName = null;
         let globalDefaultDeposit = 0; // متغیر گلوبال برای واریزی پیش‌فرض
         let globalDefaultChips = 0;   // متغیر گلوبال برای چیپ پیش‌فرض
 
+        let newWorker; // برای نگهداری رفرنس به Service Worker جدید
+        let refreshing = false; // برای جلوگیری از رفرش‌های متعدد
+
+        // ثبت Service Worker و مدیریت به‌روزرسانی‌ها
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/poker-party/service-worker.js')
-                    .then(registration => {
-                        console.log('Service Worker registered with scope:', registration.scope);
+                    .then(reg => {
+                        console.log('Service Worker registered with scope:', reg.scope);
+
+                        // تشخیص به‌روزرسانی Service Worker
+                        reg.addEventListener('updatefound', () => {
+                            newWorker = reg.installing;
+
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // Service Worker جدید نصب شده و آماده فعال‌سازی است
+                                    // (اما هنوز کنترل صفحه را به دست نگرفته)
+                                    showUpdateNotification();
+                                }
+                            });
+                        });
                     })
                     .catch(error => {
                         console.error('Service Worker registration failed:', error);
                     });
+
+                // گوش دادن به پیام‌ها از Service Worker (اختیاری، اما می‌تواند برای ارتباط استفاده شود)
+                navigator.serviceWorker.addEventListener('message', event => {
+                    if (event.data && event.data.type === 'RELOAD_PAGE') {
+                        // اگر Service Worker پیامی برای رفرش صفحه فرستاد
+                        window.location.reload(true);
+                    }
+                });
+            });
+
+            // این رویداد زمانی فعال می‌شود که Service Worker جدید کنترل صفحه را به دست می‌گیرد
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (refreshing) return;
+                refreshing = true;
+                window.location.reload(true); // رفرش اجباری صفحه
             });
         }
+
+        // نمایش پیام به‌روزرسانی
+        function showUpdateNotification() {
+            const updateNotification = document.getElementById('update-notification');
+            if (updateNotification) {
+                updateNotification.style.display = 'block';
+                updateNotification.onclick = () => {
+                    // به Service Worker می‌گوییم که فوراً فعال شود
+                    if (newWorker) {
+                        newWorker.postMessage({ type: 'SKIP_WAITING' });
+                    }
+                };
+            }
+        }
+
 
         function formatNumber(number) {
             return Number(number).toLocaleString('en-US');
@@ -1334,7 +1417,8 @@
             if (playerName) {
                 const players = getPlayers();
                 if (players.some(p => p.name === playerName)) {
-                    alert('بازیکنی با این نام از قبل وجود دارد.');
+                    // بجای alert از custom alert استفاده کنید
+                    showCustomAlert('بازیکنی با این نام از قبل وجود دارد.', null);
                     playerNameInput.focus(); // فوکوس روی اینپوت برای اصلاح
                     return;
                 }
@@ -1357,7 +1441,8 @@
                 showSuccessMessage('بازیکن ' + playerName + ' اضافه شد'); // نمایش نام بازیکن اضافه شده
                 // closeModal('add-player-modal'); // <-- این خط حذف یا کامنت می‌شود
             } else {
-                alert('نام بازیکن نمی‌تواند خالی باشد.');
+                // بجای alert از custom alert استفاده کنید
+                showCustomAlert('نام بازیکن نمی‌تواند خالی باشد.', null);
                 playerNameInput.focus();
             }
         }
@@ -1385,13 +1470,15 @@
 
 
             if (!newName) {
-                alert('نام بازیکن نمی‌تواند خالی باشد.');
+                // بجای alert از custom alert استفاده کنید
+                showCustomAlert('نام بازیکن نمی‌تواند خالی باشد.', null);
                 return;
             }
 
             const players = getPlayers();
             if (newName !== currentEditPlayerName && players.some(p => p.name === newName)) {
-                 alert('بازیکنی با نام جدید از قبل وجود دارد.');
+                 // بجای alert از custom alert استفاده کنید
+                 showCustomAlert('بازیکنی با نام جدید از قبل وجود دارد.', null);
                  return;
             }
 
@@ -1462,11 +1549,11 @@
                 }
             } else {
                  if (!playerName && !(depositAmount > 0)) {
-                    alert("لطفا بازیکن و میزان واریزی را انتخاب کنید.");
+                    showCustomAlert("لطفا بازیکن و میزان واریزی را انتخاب کنید.", null);
                 } else if (!playerName) {
-                    alert("لطفا بازیکن را انتخاب کنید.");
+                    showCustomAlert("لطفا بازیکن را انتخاب کنید.", null);
                 } else if (!(depositAmount > 0)) {
-                    alert("لطفا میزان واریزی را انتخاب کنید.");
+                    showCustomAlert("لطفا میزان واریزی را انتخاب کنید.", null);
                 }
             }
         }
@@ -1501,11 +1588,11 @@
                 }
             } else {
                  if (!playerName && !(chipsAmount > 0)) {
-                    alert("لطفا بازیکن و میزان چیپ را انتخاب کنید.");
+                    showCustomAlert("لطفا بازیکن و میزان چیپ را انتخاب کنید.", null);
                 } else if (!playerName) {
-                    alert("لطفا بازیکن را انتخاب کنید.");
+                    showCustomAlert("لطفا بازیکن را انتخاب کنید.", null);
                 } else if (!(chipsAmount > 0)) {
-                    alert("لطفا میزان چیپ را انتخاب کنید.");
+                    showCustomAlert("لطفا میزان چیپ را انتخاب کنید.", null);
                 }
             }
         }
@@ -1535,11 +1622,11 @@
                 }
             }  else {
                  if (!playerName && !(convertAmount > 0)) {
-                    alert("لطفا بازیکن و میزان تبدیل را انتخاب/وارد کنید.");
+                    showCustomAlert("لطفا بازیکن و میزان تبدیل را انتخاب/وارد کنید.", null);
                 } else if (!playerName) {
-                    alert("لطفا بازیکن را انتخاب کنید.");
+                    showCustomAlert("لطفا بازیکن را انتخاب کنید.", null);
                 } else if (!(convertAmount > 0)) {
-                    alert("لطفا میزان تبدیل را وارد کنید.");
+                    showCustomAlert("لطفا میزان تبدیل را وارد کنید.", null);
                 }
             }
         }
