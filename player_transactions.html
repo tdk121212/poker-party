@@ -352,10 +352,15 @@
 
         window.onload = function() {
             const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-            if (!isLoggedIn) {
-                // Redirect to login page, ensure full path for GitHub Pages
+            const isOffline = !navigator.onLine; // بررسی وضعیت اتصال به اینترنت
+
+            if (!isLoggedIn && !isOffline) {
+                // اگر لاگ‌این نیست و آنلاین است، به صفحه ورود هدایت کن
                 window.location.href = '/poker-party/index.html'; 
             } else {
+                // اگر لاگ‌این است (چه آنلاین چه آفلاین)، یا اگر آفلاین است (صرف نظر از وضعیت لاگ‌این)،
+                // تراکنش‌ها را بارگذاری کن.
+                // این اجازه می‌دهد که حتی اگر کاربر آفلاین باشد و لاگ‌این نباشد، بتواند داده‌های قبلی را ببیند.
                 loadTransactions();
             }
         };
