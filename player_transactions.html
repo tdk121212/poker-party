@@ -201,6 +201,19 @@
     </div>
 
     <script>
+        // ثبت Service Worker در این صفحه نیز
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/poker-party/service-worker.js')
+                    .then(reg => {
+                        console.log('Service Worker registered for player_transactions:', reg.scope);
+                    })
+                    .catch(error => {
+                        console.error('Service Worker registration failed for player_transactions:', error);
+                    });
+            });
+        }
+
         function formatNumber(number) {
             return Number(number).toLocaleString('en-US');
         }
