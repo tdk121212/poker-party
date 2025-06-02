@@ -1,5 +1,9 @@
 // service-worker.js
-const CACHE_NAME = 'poker-app-v6'; // نام کش را به‌روز کنید تا کش‌های قبلی پاک شوند
+// نام کش را به‌روز کنید تا کش‌های قبلی پاک شوند و تغییرات جدید اعمال شوند
+// هر زمان که کدهای برنامه را تغییر می‌دهید و می‌خواهید کاربر نسخه جدید را دریافت کند، این مقدار را تغییر دهید.
+const CACHE_NAME = 'poker-app-v7'; 
+
+// لیست تمام فایل‌های ضروری برنامه که باید از قبل کش شوند
 const PRECACHE_URLS = [
   '/poker-party/', // ریشه برنامه، به index.html نگاشت می‌شود
   '/poker-party/index.html',
@@ -9,8 +13,7 @@ const PRECACHE_URLS = [
   '/poker-party/icons/icon-512x512.png',
   '/poker-party/fonts/Vazirmatn-Regular.ttf',
   '/poker-party/fonts/Vazirmatn-Bold.ttf',
-  // یک صفحه آفلاین ساده اضافه کنید (اختیاری اما توصیه می‌شود)
-  '/poker-party/offline.html' 
+  '/poker-party/offline.html' // صفحه آفلاین پیش‌فرض
 ];
 
 // این تابع برای تمیز کردن URL از پارامترهای هش و کوئری برای مقاصد کش کردن استفاده می‌شود.
@@ -21,17 +24,20 @@ const cleanUrl = (url) => {
   return urlObj.toString();
 };
 
+// رویداد 'install': هنگام نصب Service Worker اجرا می‌شود.
+// در این مرحله، تمام فایل‌های ضروری برنامه را کش می‌کنیم.
 self.addEventListener('install', event => {
   console.log('[Service Worker] Installing...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
         console.log(`[Service Worker] Caching app shell: ${PRECACHE_URLS.length} files`);
+        // اضافه کردن تمام URLهای پیش‌کش به کش
         return cache.addAll(PRECACHE_URLS);
       })
       .then(() => {
         console.log('[Service Worker] Skip waiting on install');
-        // فعال‌سازی فوری سرویس ورکر جدید
+        // فعال‌سازی فوری سرویس ورکر جدید پس از نصب موفق
         return self.skipWaiting(); 
       })
       .catch(error => {
@@ -40,9 +46,11 @@ self.addEventListener('install', event => {
   );
 });
 
+// رویداد 'activate': هنگام فعال‌سازی Service Worker جدید اجرا می‌شود.
+// در این مرحله، کش‌های قدیمی را پاک می‌کنیم تا فضای ذخیره‌سازی آزاد شود.
 self.addEventListener('activate', event => {
   console.log('[Service Worker] Activating new service worker...');
-  const cacheWhitelist = [CACHE_NAME];
+  const cacheWhitelist = [CACHE_NAME]; // لیست کش‌های مجاز (فقط کش فعلی)
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
@@ -56,85 +64,74 @@ self.addEventListener('activate', event => {
       );
     }).then(() => {
       console.log('[Service Worker] Claiming clients');
-      // کنترل فوری کلاینت‌ها (صفحات باز مرورگر)
+      // کنترل فوری کلاینت‌ها (صفحات باز مرورگر) توسط Service Worker جدید
       return self.clients.claim(); 
     })
   );
 });
 
+// رویداد 'fetch': هر بار که مرورگر درخواستی برای منبعی می‌دهد، اجرا می‌شود.
+// این رویداد قلب قابلیت آفلاین برنامه است.
 self.addEventListener('fetch', event => {
   const request = event.request;
   const requestUrl = new URL(request.url);
 
-  // فقط درخواست‌های GET را مدیریت کن
+  // فقط درخواست‌های GET را مدیریت کن (درخواست‌های POST و غیره به شبکه ارسال می‌شوند)
   if (request.method !== 'GET') {
     event.respondWith(fetch(request));
     return;
   }
 
-  // استراتژی برای فایل‌های HTML اصلی (ناوبری)
-  // این استراتژی: ابتدا کش، سپس شبکه. در صورت شکست هر دو، صفحه آفلاین را نمایش می‌دهد.
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      caches.match(cleanUrl(request.url)) // از cleanUrl برای تطبیق دقیق‌تر استفاده کنید
-        .then(cachedResponse => {
-          if (cachedResponse) {
-            console.log('[Service Worker] Serving from cache (navigation):', requestUrl.pathname);
-            return cachedResponse;
-          }
-          console.log('[Service Worker] Fetching from network (navigation):', request.url);
-          return fetch(request)
-            .then(networkResponse => {
-              // اگر پاسخ معتبر بود، آن را برای استفاده‌های بعدی کش کن
-              if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-                const responseToCache = networkResponse.clone();
-                caches.open(CACHE_NAME).then(cache => {
-                  cache.put(cleanUrl(request.url), responseToCache);
-                });
-              }
-              return networkResponse;
-            })
-            .catch(() => {
-              console.log('[Service Worker] Network request failed for navigation, serving offline page:', requestUrl.pathname);
-              // در صورت عدم دسترسی به شبکه، صفحه آفلاین را برگردان
-              return caches.match('/poker-party/offline.html'); 
-            });
-        })
-    );
-    return;
-  }
-
-  // استراتژی Cache First, then Network برای سایر منابع (CSS, JS, تصاویر، فونت‌ها)
-  // این استراتژی: ابتدا کش را بررسی می‌کند. اگر پیدا شد، آن را برمی‌گرداند.
-  // اگر پیدا نشد، از شبکه درخواست می‌دهد. اگر از شبکه هم موفق نشد، هیچ فال‌بکی ندارد
-  // (می‌توانید برای تصاویر یک placeholder برگردانید).
+  // استراتژی "Cache First, then Network" برای تمام درخواست‌ها
+  // این استراتژی:
+  // 1. ابتدا سعی می‌کند منبع را از کش پیدا کند.
+  // 2. اگر در کش بود، آن را برمی‌گرداند.
+  // 3. اگر در کش نبود، از شبکه درخواست می‌دهد.
+  // 4. اگر از شبکه هم موفق نشد (مثلاً آفلاین بود)، یک صفحه آفلاین را نمایش می‌دهد.
   event.respondWith(
-    caches.match(request)
+    caches.match(request) // ابتدا سعی کن از کش پیدا کنی
       .then(cachedResponse => {
+        // اگر در کش پیدا شد، آن را برگردان
         if (cachedResponse) {
           console.log('[Service Worker] Serving from cache:', request.url);
           return cachedResponse;
         }
+
+        // اگر در کش نبود، از شبکه درخواست بده
         console.log('[Service Worker] Fetching from network:', request.url);
-        return fetch(request).then(networkResponse => {
-          // اگر پاسخ معتبر بود، آن را برای استفاده‌های بعدی کش کن
-          if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-            const responseToCache = networkResponse.clone();
-            caches.open(CACHE_NAME).then(cache => {
-              cache.put(request, responseToCache);
-            });
-          }
-          return networkResponse;
-        }).catch(error => {
-          console.error('[Service Worker] Fetch error for non-navigation request:', error, request.url);
-          // در صورت بروز خطا برای منابع غیر HTML، می‌توانید یک پاسخ جایگزین ارائه دهید
-          // مثلاً برای تصاویر می‌توانید یک تصویر placeholder برگردانید
-          // if (request.destination === 'image') {
-          //   return caches.match('/poker-party/placeholder-image.png');
-          // }
-          // برای سایر منابع، ممکن است مرورگر خطا بدهد یا خالی بماند
-          throw error; // خطا را دوباره پرتاب کنید تا مرورگر آن را مدیریت کند
-        });
+        return fetch(request)
+          .then(networkResponse => {
+            // اگر پاسخ معتبر بود (مثلاً 200 OK)، آن را در کش ذخیره کن
+            if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+              const responseToCache = networkResponse.clone();
+              caches.open(CACHE_NAME).then(cache => {
+                cache.put(request, responseToCache);
+              });
+            }
+            return networkResponse; // پاسخ شبکه را برگردان
+          })
+          .catch(error => {
+            // اگر از شبکه هم موفق نشد (مثلاً خطای شبکه یا آفلاین بود)،
+            // و درخواست برای یک صفحه HTML بود، صفحه آفلاین را برگردان.
+            // برای منابع دیگر (مثل تصاویر یا JS)، می‌توانید فال‌بک خاصی داشته باشید
+            // یا اجازه دهید مرورگر خطا را مدیریت کند.
+            console.error('[Service Worker] Network request failed:', error, request.url);
+            if (request.mode === 'navigate' || request.destination === 'document') {
+              return caches.match('/poker-party/offline.html');
+            }
+            // برای سایر منابع، می‌توانید یک پاسخ پیش‌فرض (مثلاً تصویر placeholder) برگردانید
+            // یا خطا را پرتاب کنید تا مرورگر آن را مدیریت کند.
+            throw error; 
+          });
       })
   );
 });
+
+// رویداد 'message': برای دریافت پیام از صفحات وب (کلاینت‌ها)
+self.addEventListener('message', event => {
+  // اگر پیامی برای skipWaiting دریافت شد، Service Worker را فوراً فعال کن
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
