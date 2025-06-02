@@ -1,7 +1,7 @@
 // service-worker.js
 // نام کش را به‌روز کنید تا کش‌های قبلی پاک شوند و تغییرات جدید اعمال شوند
 // هر زمان که کدهای برنامه را تغییر می‌دهید و می‌خواهید کاربر نسخه جدید را دریافت کند، این مقدار را تغییر دهید.
-const CACHE_NAME = 'poker-app-v8'; 
+const CACHE_NAME = 'poker-app-v9'; 
 
 // لیست تمام فایل‌های ضروری برنامه که باید از قبل کش شوند
 const PRECACHE_URLS = [
@@ -88,8 +88,46 @@ self.addEventListener('fetch', event => {
   // 2. اگر در کش بود، آن را برمی‌گرداند.
   // 3. اگر در کش نبود، از شبکه درخواست می‌دهد.
   // 4. اگر از شبکه هم موفق نشد (مثلاً آفلاین بود)، یک صفحه آفلاین را نمایش می‌دهد.
+
+  // برای درخواست‌های ناوبری (مانند بارگذاری صفحات HTML)
+  if (request.mode === 'navigate') {
+    // مسیر اصلی URL را بدون پارامترهای کوئری یا هش دریافت کن
+    const cleanedRequestUrl = cleanUrl(request.url);
+
+    event.respondWith(
+      caches.match(cleanedRequestUrl) // سعی کن نسخه "تمیز" URL را از کش پیدا کنی
+        .then(cachedResponse => {
+          if (cachedResponse) {
+            console.log('[Service Worker] Serving from cache (navigation - cleaned URL):', cleanedRequestUrl);
+            return cachedResponse;
+          }
+          // اگر در کش پیدا نشد، از شبکه درخواست بده
+          console.log('[Service Worker] Fetching from network (navigation):', request.url);
+          return fetch(request)
+            .then(networkResponse => {
+              // اگر پاسخ معتبر بود (مثلاً 200 OK)، آن را در کش ذخیره کن (با URL تمیز)
+              if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+                const responseToCache = networkResponse.clone();
+                caches.open(CACHE_NAME).then(cache => {
+                  cache.put(cleanedRequestUrl, responseToCache); // ذخیره با URL تمیز
+                });
+              }
+              return networkResponse; // پاسخ شبکه را برگردان
+            })
+            .catch(error => {
+              // اگر از شبکه هم موفق نشد (مثلاً خطای شبکه یا آفلاین بود)،
+              // صفحه آفلاین را برگردان.
+              console.error('[Service Worker] Network request failed for navigation, serving offline page:', requestUrl.pathname, error);
+              return caches.match('/poker-party/offline.html'); 
+            });
+        })
+    );
+    return;
+  }
+
+  // برای سایر منابع (CSS, JS, تصاویر، فونت‌ها)
   event.respondWith(
-    caches.match(request) // ابتدا سعی کن از کش پیدا کنی
+    caches.match(request) // ابتدا سعی کن از کش پیدا کنی (با URL اصلی)
       .then(cachedResponse => {
         // اگر در کش پیدا شد، آن را برگردان
         if (cachedResponse) {
@@ -111,15 +149,8 @@ self.addEventListener('fetch', event => {
             return networkResponse; // پاسخ شبکه را برگردان
           })
           .catch(error => {
-            // اگر از شبکه هم موفق نشد (مثلاً خطای شبکه یا آفلاین بود)،
-            // و درخواست برای یک صفحه HTML بود، صفحه آفلاین را برگردان.
-            // برای منابع دیگر (مثل تصاویر یا JS)، می‌توانید فال‌بک خاصی داشته باشید
-            // یا اجازه دهید مرورگر خطا را مدیریت کند.
-            console.error('[Service Worker] Network request failed:', error, request.url);
-            if (request.mode === 'navigate' || request.destination === 'document') {
-              return caches.match('/poker-party/offline.html');
-            }
-            // برای سایر منابع، می‌توانید یک پاسخ پیش‌فرض (مثلاً تصویر placeholder) برگردانید
+            console.error('[Service Worker] Fetch error for non-navigation request:', error, request.url);
+            // برای منابع غیر HTML، می‌توانید یک پاسخ جایگزین (مثلاً تصویر placeholder) برگردانید
             // یا خطا را پرتاب کنید تا مرورگر آن را مدیریت کند.
             throw error; 
           });
