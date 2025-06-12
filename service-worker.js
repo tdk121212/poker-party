@@ -1,7 +1,7 @@
 // service-worker.js
 
 // با هر بار آپدیت، این شماره را یک واحد افزایش دهید.
-const CACHE_NAME = 'poker-app-v13'; // <--- مثلاً نسخه بعدی v11 خواهد بود
+const CACHE_NAME = 'poker-app-v14'; // <--- مثلاً نسخه بعدی v11 خواهد بود
 
 const PRECACHE_URLS = [
   '/poker-party/',
