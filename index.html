@@ -266,7 +266,6 @@
             box-shadow: 0 4px 15px rgba(70, 130, 180, 0.4);
         }
         
-        /* --- NEW STYLE --- */
         .undo-btn {
             background: linear-gradient(45deg, #ff8c00, #ffa500); /* Orange gradient */
         }
@@ -352,7 +351,19 @@
         .nav-item .icon {
             font-size: 2rem;
             margin-bottom: 5px;
+            /* --- CHANGE: Ensure SVG icon scales correctly --- */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 2rem;
+            width: 2rem;
         }
+        
+        .nav-item .icon svg {
+             height: 100%;
+             width: 100%;
+        }
+
 
         .nav-item .label {
             text-align: center;
@@ -527,14 +538,13 @@
             color: #1a1a1a; /* <--- تغییر به رنگ تیره */
             font-size: 1.1rem;
             font-weight: 700;
-            /* text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); */ /* حذف یا تنظیم سایه متن در صورت نیاز */
             cursor: pointer;
             transition: all 0.3s ease;
         }
 
         .custom-select .select-options li:hover {
-            background: rgba(106, 90, 205, 0.2); /* پس‌زمینه هاور را کمی روشن‌تر یا متفاوت کنید */
-            color: #000000; /* رنگ متن هاور هم می‌تواند مشکی بماند یا کمی تغییر کند */
+            background: rgba(106, 90, 205, 0.2);
+            color: #000000;
         
         }
 
@@ -745,7 +755,8 @@
             }
 
             .nav-item .icon {
-                font-size: 1.8rem;
+                height: 1.8rem;
+                width: 1.8rem;
             }
 
             .modal-content {
@@ -849,7 +860,8 @@
             }
 
             .nav-item .icon {
-                font-size: 1.6rem;
+                height: 1.6rem;
+                width: 1.6rem;
                 margin-bottom: 3px;
             }
 
@@ -879,8 +891,13 @@
 
     <div id="app-page">
         <div class="bottom-nav">
+            <!-- CHANGE 1: Switched text icon to SVG for better visibility -->
             <button class="nav-item" onclick="openModal('add-player-modal')">
-                <span class="icon">➕</span>
+                <span class="icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                    </svg>
+                </span>
                 <span class="label">اضافه کردن بازیکن</span>
             </button>
             <button class="nav-item" onclick="openModal('record-deposit-modal')">
@@ -981,9 +998,9 @@
             <input type="text" inputmode="numeric" id="edit-chips-amount" placeholder="چیپ جدید (اختیاری)" oninput="formatNumberInput(this)">
             <div class="modal-buttons">
                 <button onclick="confirmEditPlayer()">ذخیره</button>
-                <!-- --- NEW BUTTON --- -->
                 <button id="undo-last-conversion-btn" class="undo-btn" onclick="undoLastConversion()">لغو آخرین تبدیل</button>
-                <button class="delete-btn" onclick="showCustomAlert('آیا مطمئن هستید که می‌خواهید ' + (document.getElementById('edit-player-name').value || currentEditPlayerName) + ' را حذف کنید؟ این عمل غیرقابل بازگشت است.', () => deletePlayer(currentEditPlayerName))">حذف</button>
+                <!-- CHANGE 2: Changed button text -->
+                <button class="delete-btn" onclick="showCustomAlert('آیا مطمئن هستید که می‌خواهید ' + (document.getElementById('edit-player-name').value || currentEditPlayerName) + ' را حذف کنید؟ این عمل غیرقابل بازگشت است.', () => deletePlayer(currentEditPlayerName))">حذف بازیکن</button>
                 <button onclick="closeModal('edit-player-modal')">بازگشت</button>
             </div>
         </div>
@@ -1036,6 +1053,8 @@
             </div>
             <input type="text" inputmode="numeric" id="convert-amount" placeholder="میزان چیپ" oninput="formatNumberInput(this)">
             <button onclick="convertChipsToMoney()">ثبت تبدیل</button>
+            <!-- CHANGE 3: Added a dedicated success message container -->
+            <div id="convert-success-message" style="display: none; color: #00ff00; text-align: center; margin-top: 10px; font-weight: bold;"></div>
         </div>
     </div>
 
@@ -1073,8 +1092,6 @@
 
                             newWorker.addEventListener('statechange', () => {
                                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    // Service Worker جدید نصب شده و آماده فعال‌سازی است
-                                    // (اما هنوز کنترل صفحه را به دست نگرفته)
                                     showUpdateNotification();
                                 }
                             });
@@ -1084,16 +1101,13 @@
                         console.error('Service Worker registration failed:', error);
                     });
 
-                // گوش دادن به پیام‌ها از Service Worker (اختیاری، اما می‌تواند برای ارتباط استفاده شود)
                 navigator.serviceWorker.addEventListener('message', event => {
                     if (event.data && event.data.type === 'RELOAD_PAGE') {
-                        // اگر Service Worker پیامی برای رفرش صفحه فرستاد
                         window.location.reload(true);
                     }
                 });
             });
 
-            // این رویداد زمانی فعال می‌شود که Service Worker جدید کنترل صفحه را به دست می‌گیرد
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 if (refreshing) return;
                 refreshing = true;
@@ -1101,13 +1115,11 @@
             });
         }
 
-        // نمایش پیام به‌روزرسانی
         function showUpdateNotification() {
             const updateNotification = document.getElementById('update-notification');
             if (updateNotification) {
                 updateNotification.style.display = 'block';
                 updateNotification.onclick = () => {
-                    // به Service Worker می‌گوییم که فوراً فعال شود
                     if (newWorker) {
                         newWorker.postMessage({ type: 'SKIP_WAITING' });
                     }
@@ -1127,7 +1139,6 @@
             } else if (value === '') {
                  input.value = '';
             }
-            // به‌روزرسانی متغیرهای گلوبال اگر این اینپوت‌ها مربوط به پیش‌فرض‌ها باشند
             if (input.id === 'default-deposit') {
                 globalDefaultDeposit = parseFormattedNumber(input.value);
             } else if (input.id === 'default-chips') {
@@ -1142,7 +1153,7 @@
 
         function showSuccessMessage(message) {
             const successMessage = document.getElementById('success-message');
-            if (successMessage) { // Check if element exists
+            if (successMessage) { 
                 successMessage.textContent = message;
                 successMessage.classList.add('show');
                 setTimeout(() => {
@@ -1279,12 +1290,6 @@
                 document.getElementById('custom-alert-modal').style.display = 'none';
                 loadPlayers();
                 loadTotals();
-                // بازیابی مقادیر پیش‌فرض از localStorage در صورت وجود (اختیاری، برای ماندگاری بیشتر)
-                // globalDefaultDeposit = parseInt(localStorage.getItem('globalDefaultDeposit')) || 0;
-                // globalDefaultChips = parseInt(localStorage.getItem('globalDefaultChips')) || 0;
-                // document.getElementById('default-deposit').value = globalDefaultDeposit > 0 ? formatNumber(globalDefaultDeposit) : '';
-                // document.getElementById('default-chips').value = globalDefaultChips > 0 ? formatNumber(globalDefaultChips) : '';
-
             } else {
                 document.getElementById('login-page').style.display = 'block';
                 document.getElementById('app-page').style.display = 'none';
@@ -1311,11 +1316,6 @@
 
         function logout() {
             localStorage.removeItem('isLoggedIn');
-            // پاک کردن مقادیر پیش‌فرض هنگام خروج (اختیاری)
-            // localStorage.removeItem('globalDefaultDeposit');
-            // localStorage.removeItem('globalDefaultChips');
-            // globalDefaultDeposit = 0;
-            // globalDefaultChips = 0;
             document.getElementById('app-page').style.display = 'none';
             document.getElementById('login-page').style.display = 'block';
             document.getElementById('admin-password').value = '';
@@ -1383,15 +1383,13 @@
                 sum + (player.chipsConverted ? player.chipsConverted.reduce((convertedSum, convertedItem) => convertedSum + (convertedItem.amount || 0), 0) : 0), 0);
 
             const totalCurrentlyInPlayChips = totalAllChipsReceived - totalAllChipsConverted;
-            const totalNetPlayerInvestment = totalAllDeposits - totalAllChipsConverted; // واریزی - تبدیل شده
-            // اعتبار باقیمانده کل باید صفر باشد اگر همه چیز درست باشد: (واریزی + تبدیل شده) - چیپ‌های دریافتی
             const totalRemainingCreditSystem = totalAllDeposits + totalAllChipsConverted - totalAllChipsReceived;
 
 
             document.getElementById('total-players').textContent = totalPlayers;
             document.getElementById('total-deposits').textContent = formatNumber(totalAllDeposits);
-            document.getElementById('total-chips').textContent = formatNumber(totalCurrentlyInPlayChips); // مجموع چیپ موجود در بازی
-            document.getElementById('total-remaining-credit').textContent = formatNumber(totalRemainingCreditSystem); // مجموع اعتبار باقیمانده سیستم
+            document.getElementById('total-chips').textContent = formatNumber(totalCurrentlyInPlayChips);
+            document.getElementById('total-remaining-credit').textContent = formatNumber(totalRemainingCreditSystem);
         }
 
 
@@ -1429,14 +1427,12 @@
             if (playerName) {
                 const players = getPlayers();
                 if (players.some(p => p.name === playerName)) {
-                    // بجای alert از custom alert استفاده کنید
                     showCustomAlert('بازیکنی با این نام از قبل وجود دارد.', null);
-                    playerNameInput.focus(); // فوکوس روی اینپوت برای اصلاح
+                    playerNameInput.focus();
                     return;
                 }
-                // استفاده از مقادیر گلوبال برای پیش‌فرض‌ها
-                const defaultDepositToUse = globalDefaultDeposit; // یا خواندن از localStorage اگر از آن روش استفاده می‌کنید
-                const defaultChipsToUse = globalDefaultChips;   // یا خواندن از localStorage
+                const defaultDepositToUse = globalDefaultDeposit;
+                const defaultChipsToUse = globalDefaultChips;
                 const currentTime = new Date().toLocaleString('fa-IR', { hour12: false });
 
 
@@ -1448,18 +1444,15 @@
                 });
                 savePlayers(players);
                 loadPlayers();
-                playerNameInput.value = ''; // پاک کردن فیلد نام بازیکن برای ورود نفر بعدی
-                playerNameInput.focus();    // فوکوس روی فیلد نام بازیکن برای ورود نفر بعدی
-                showSuccessMessage('بازیکن ' + playerName + ' اضافه شد'); // نمایش نام بازیکن اضافه شده
-                // closeModal('add-player-modal'); // <-- این خط حذف یا کامنت می‌شود
+                playerNameInput.value = '';
+                playerNameInput.focus();
+                showSuccessMessage('بازیکن ' + playerName + ' اضافه شد');
             } else {
-                // بجای alert از custom alert استفاده کنید
                 showCustomAlert('نام بازیکن نمی‌تواند خالی باشد.', null);
                 playerNameInput.focus();
             }
         }
 
-        // --- MODIFIED FUNCTION ---
         function openEditPlayerModal(playerName) {
             currentEditPlayerName = playerName;
             const players = getPlayers();
@@ -1471,7 +1464,6 @@
                 document.getElementById('edit-deposit-amount').value = '';
                 document.getElementById('edit-chips-amount').value = '';
 
-                // Show or hide the "Undo Last Conversion" button
                 if (player.chipsConverted && player.chipsConverted.length > 0) {
                     undoBtn.style.display = 'inline-block';
                 } else {
@@ -1482,7 +1474,6 @@
             }
         }
         
-        // --- NEW FUNCTION ---
         function undoLastConversion() {
             if (!currentEditPlayerName) return;
 
@@ -1502,7 +1493,7 @@
                 const playerToUpdate = currentPlayers.find(p => p.name === currentEditPlayerName);
 
                 if (playerToUpdate && playerToUpdate.chipsConverted && playerToUpdate.chipsConverted.length > 0) {
-                    playerToUpdate.chipsConverted.pop(); // Remove the last item from the array
+                    playerToUpdate.chipsConverted.pop();
                     savePlayers(currentPlayers);
                     loadPlayers();
                     closeModal('edit-player-modal');
@@ -1523,14 +1514,12 @@
 
 
             if (!newName) {
-                // بجای alert از custom alert استفاده کنید
                 showCustomAlert('نام بازیکن نمی‌تواند خالی باشد.', null);
                 return;
             }
 
             const players = getPlayers();
             if (newName !== currentEditPlayerName && players.some(p => p.name === newName)) {
-                 // بجای alert از custom alert استفاده کنید
                  showCustomAlert('بازیکنی با نام جدید از قبل وجود دارد.', null);
                  return;
             }
@@ -1649,12 +1638,14 @@
                 }
             }
         }
-
+        
+        // --- MODIFIED FUNCTION ---
         function convertChipsToMoney() {
             const customSelect = document.getElementById('convert-player-select');
             const playerName = customSelect.getAttribute('data-selected');
             const convertAmountInput = document.getElementById('convert-amount');
             const convertAmount = parseFormattedNumber(convertAmountInput.value);
+            const successDiv = document.getElementById('convert-success-message');
 
             if (playerName && convertAmount > 0) {
                 const players = getPlayers();
@@ -1668,10 +1659,23 @@
                     });
                     savePlayers(players);
                     loadPlayers();
+
+                    // Show temporary success message
+                    successDiv.textContent = `تبدیل برای ${playerName} به مبلغ ${formatNumber(convertAmount)} ثبت شد.`;
+                    successDiv.style.display = 'block';
+                    setTimeout(() => {
+                        successDiv.style.display = 'none';
+                    }, 2500);
+
+
+                    // Reset fields for next entry
                     convertAmountInput.value = '';
                     customSelect.querySelector('.select-display').textContent = 'انتخاب بازیکن';
                     customSelect.removeAttribute('data-selected');
-                    closeModal('convert-chips-modal');
+                    customSelect.querySelector('input[type=text], .select-display').focus();
+                    
+                    // The line to close the modal is removed to keep it open
+                    // closeModal('convert-chips-modal'); 
                 }
             }  else {
                  if (!playerName && !(convertAmount > 0)) {
@@ -1685,7 +1689,6 @@
         }
 
         function openNewGameSection() {
-            // مقادیر پیش‌فرض فعلی را در فیلدها نمایش بده
             document.getElementById('default-deposit').value = globalDefaultDeposit > 0 ? formatNumber(globalDefaultDeposit) : '';
             document.getElementById('default-chips').value = globalDefaultChips > 0 ? formatNumber(globalDefaultChips) : '';
 
@@ -1694,13 +1697,9 @@
         }
 
         function closeNewGameSection() {
-            // هنگام بستن مودال "شروع بازی جدید"، مقادیر وارد شده را در متغیرهای گلوبال ذخیره کن
             globalDefaultDeposit = parseFormattedNumber(document.getElementById('default-deposit').value);
             globalDefaultChips = parseFormattedNumber(document.getElementById('default-chips').value);
-            // ذخیره در localStorage برای ماندگاری (اختیاری)
-            // localStorage.setItem('globalDefaultDeposit', globalDefaultDeposit);
-            // localStorage.setItem('globalDefaultChips', globalDefaultChips);
-
+            
             document.getElementById('new-game-section').style.display = 'none';
             document.getElementById('players-table-container').style.display = 'block';
         }
@@ -1727,16 +1726,10 @@
         function confirmClearPlayers() {
             savePlayers([]);
             loadPlayers();
-            // مقادیر پیش‌فرض را بعد از پاک کردن بازیکنان هم در متغیرهای گلوبال ذخیره کن
             globalDefaultDeposit = parseFormattedNumber(document.getElementById('default-deposit').value);
             globalDefaultChips = parseFormattedNumber(document.getElementById('default-chips').value);
-            // اگر از localStorage استفاده می‌کنید، آن را هم به‌روز کنید:
-            // localStorage.setItem(DEFAULT_DEPOSIT_KEY, globalDefaultDeposit);
-            // localStorage.setItem(DEFAULT_CHIPS_KEY, globalDefaultChips);
-
-            showSuccessMessage('تمام اطلاعات بازیکنان پاک شد.');
             
-            // اضافه کردن این خط برای بستن مودال و نمایش جدول بازیکنان
+            showSuccessMessage('تمام اطلاعات بازیکنان پاک شد.');
             closeNewGameSection(); 
         }
 
@@ -1744,12 +1737,9 @@
             const modals = document.querySelectorAll('.modal');
             modals.forEach(modal => {
                 if (event.target === modal) {
-                    // اگر مودال "شروع بازی جدید" با کلیک بیرون بسته شد، مقادیر را ذخیره کن
                     if (modal.id === 'new-game-section') {
                         globalDefaultDeposit = parseFormattedNumber(document.getElementById('default-deposit').value);
                         globalDefaultChips = parseFormattedNumber(document.getElementById('default-chips').value);
-                        // localStorage.setItem('globalDefaultDeposit', globalDefaultDeposit);
-                        // localStorage.setItem('globalDefaultChips', globalDefaultChips);
                         document.getElementById('players-table-container').style.display = 'block';
                     }
                     modal.style.display = "none";
