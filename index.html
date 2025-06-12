@@ -1,3 +1,20 @@
+عالی! درخواست بسیار واضح و کاربردی‌ای است. برای اضافه کردن قابلیت لغو آخرین تراکنش "تبدیل چیپ" (Undo)، باید چند بخش از کد index (1).html را تغییر دهیم. این کار شامل اضافه کردن یک دکمه جدید به مودال ویرایش، نوشتن استایل CSS برای آن و پیاده‌سازی منطق جاوااسکریپت برای انجام این کار است.
+
+منطق کار به این صورت خواهد بود:
+
+یک دکمه جدید به نام "لغو آخرین تبدیل" در مودال ویرایش بازیکن اضافه می‌کنیم.
+
+این دکمه فقط زمانی نمایش داده می‌شود که بازیکن حداقل یک تراکنش تبدیل چیپ داشته باشد.
+
+با کلیک روی این دکمه، یک پیام تأیید نمایش داده می‌شود.
+
+در صورت تأیید، آخرین آیتم از آرایه chipsConverted مربوط به آن بازیکن حذف می‌شود.
+
+سپس اطلاعات در localStorage ذخیره شده و جدول به‌روزرسانی می‌شود.
+
+در ادامه، کد کامل و اصلاح شده فایل index (1).html را برایتان قرار می‌دهم. شما می‌توانید محتوای فایل فعلی خود را با این کد جایگزین کنید. فایل‌های دیگر نیازی به تغییر ندارند.
+
+کد اصلاح شده فایل index (1).html
 <script type="text/javascript">
         var gk_isXlsx = false;
         var gk_xlsxFileLookup = {};
@@ -235,7 +252,7 @@
             justify-content: flex-end;
         }
 
-        .delete-btn, .edit-btn {
+        .delete-btn, .edit-btn, .undo-btn {
             padding: 8px 12px;
             border: none;
             border-radius: 6px;
@@ -264,6 +281,16 @@
             background: linear-gradient(45deg, #87ceeb, #4682b4);
             transform: translateY(-2px);
             box-shadow: 0 4px 15px rgba(70, 130, 180, 0.4);
+        }
+        
+        /* --- NEW STYLE --- */
+        .undo-btn {
+            background: linear-gradient(45deg, #ff8c00, #ffa500); /* Orange gradient */
+        }
+        .undo-btn:hover {
+            background: linear-gradient(45deg, #ffa500, #ff8c00);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(255, 140, 0, 0.4);
         }
 
         /* Totals table styles */
@@ -703,7 +730,7 @@
                 gap: 6px;
             }
 
-            .delete-btn, .edit-btn {
+            .delete-btn, .edit-btn, .undo-btn {
                 width: 100%;
                 text-align: center;
                 padding: 10px;
@@ -809,7 +836,7 @@
                 font-size: 0.9rem;
             }
 
-            .delete-btn, .edit-btn {
+            .delete-btn, .edit-btn, .undo-btn {
                 padding: 8px;
                 font-size: 0.8rem;
             }
@@ -971,6 +998,8 @@
             <input type="text" inputmode="numeric" id="edit-chips-amount" placeholder="چیپ جدید (اختیاری)" oninput="formatNumberInput(this)">
             <div class="modal-buttons">
                 <button onclick="confirmEditPlayer()">ذخیره</button>
+                <!-- --- NEW BUTTON --- -->
+                <button id="undo-last-conversion-btn" class="undo-btn" onclick="undoLastConversion()">لغو آخرین تبدیل</button>
                 <button class="delete-btn" onclick="showCustomAlert('آیا مطمئن هستید که می‌خواهید ' + (document.getElementById('edit-player-name').value || currentEditPlayerName) + ' را حذف کنید؟ این عمل غیرقابل بازگشت است.', () => deletePlayer(currentEditPlayerName))">حذف</button>
                 <button onclick="closeModal('edit-player-modal')">بازگشت</button>
             </div>
@@ -1447,18 +1476,59 @@
             }
         }
 
+        // --- MODIFIED FUNCTION ---
         function openEditPlayerModal(playerName) {
             currentEditPlayerName = playerName;
             const players = getPlayers();
             const player = players.find(p => p.name === playerName);
+            const undoBtn = document.getElementById('undo-last-conversion-btn');
 
             if (player) {
                 document.getElementById('edit-player-name').value = player.name;
                 document.getElementById('edit-deposit-amount').value = '';
                 document.getElementById('edit-chips-amount').value = '';
+
+                // Show or hide the "Undo Last Conversion" button
+                if (player.chipsConverted && player.chipsConverted.length > 0) {
+                    undoBtn.style.display = 'inline-block';
+                } else {
+                    undoBtn.style.display = 'none';
+                }
+
                 openModal('edit-player-modal');
             }
         }
+        
+        // --- NEW FUNCTION ---
+        function undoLastConversion() {
+            if (!currentEditPlayerName) return;
+
+            const players = getPlayers();
+            const player = players.find(p => p.name === currentEditPlayerName);
+
+            if (!player || !player.chipsConverted || player.chipsConverted.length === 0) {
+                showCustomAlert("هیچ تراکنش تبدیلی برای این بازیکن جهت لغو وجود ندارد.", null);
+                return;
+            }
+
+            const lastConversion = player.chipsConverted[player.chipsConverted.length - 1];
+            const confirmationMessage = `آیا مطمئن هستید که می‌خواهید آخرین تراکنش تبدیل چیپ برای ${player.name} به مبلغ ${formatNumber(lastConversion.amount)} را لغو کنید؟`;
+
+            showCustomAlert(confirmationMessage, () => {
+                const currentPlayers = getPlayers();
+                const playerToUpdate = currentPlayers.find(p => p.name === currentEditPlayerName);
+
+                if (playerToUpdate && playerToUpdate.chipsConverted && playerToUpdate.chipsConverted.length > 0) {
+                    playerToUpdate.chipsConverted.pop(); // Remove the last item from the array
+                    savePlayers(currentPlayers);
+                    loadPlayers();
+                    closeModal('edit-player-modal');
+                    currentEditPlayerName = null;
+                    showSuccessMessage('آخرین تراکنش تبدیل با موفقیت لغو شد.');
+                }
+            });
+        }
+
 
         function confirmEditPlayer() {
             const newNameInput = document.getElementById('edit-player-name');
@@ -1709,3 +1779,64 @@
     </script>
 </body>
 </html>
+
+خلاصه تغییرات انجام شده:
+
+HTML (درون مودال edit-player-modal):
+
+یک دکمه جدید با id="undo-last-conversion-btn" و کلاس undo-btn اضافه شد.
+
+<button id="undo-last-conversion-btn" class="undo-btn" onclick="undoLastConversion()">لغو آخرین تبدیل</button>
+IGNORE_WHEN_COPYING_START
+content_copy
+download
+Use code with caution.
+Html
+IGNORE_WHEN_COPYING_END
+
+CSS (درون تگ <style>):
+
+یک کلاس جدید به نام .undo-btn با استایل نارنجی برای دکمه جدید تعریف شد تا از دکمه‌های دیگر متمایز باشد.
+
+.undo-btn {
+    background: linear-gradient(45deg, #ff8c00, #ffa500); /* Orange gradient */
+}
+.undo-btn:hover {
+    background: linear-gradient(45deg, #ffa500, #ff8c00);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(255, 140, 0, 0.4);
+}
+IGNORE_WHEN_COPYING_START
+content_copy
+download
+Use code with caution.
+Css
+IGNORE_WHEN_COPYING_END
+
+همچنین کلاس .undo-btn به سلکتورهای مربوط به .delete-btn و .edit-btn اضافه شد تا در اندازه‌های مختلف صفحه نمایش، به درستی نمایش داده شود.
+
+JavaScript (درون تگ <script>):
+
+تابع openEditPlayerModal اصلاح شد:
+
+اکنون قبل از باز کردن مودال، چک می‌کند که آیا بازیکن مورد نظر تراکنش chipsConverted دارد یا نه.
+
+اگر داشت، دکمه "لغو آخرین تبدیل" را نمایش می‌دهد (display = 'inline-block').
+
+اگر نداشت، آن را مخفی می‌کند (display = 'none').
+
+تابع جدید undoLastConversion اضافه شد:
+
+این تابع مسئول اصلی منطق لغو تراکنش است.
+
+ابتدا بررسی می‌کند که آیا بازیکنی برای ویرایش انتخاب شده و آیا تراکنش تبدیلی برای لغو وجود دارد.
+
+با استفاده از showCustomAlert از کاربر تأیید می‌گیرد.
+
+در صورت تأیید، با استفاده از متد .pop() آخرین عضو آرایه chipsConverted را حذف می‌کند.
+
+اطلاعات را ذخیره و جدول را مجدداً بارگذاری می‌کند.
+
+یک پیام موفقیت‌آمیز به کاربر نمایش می‌دهد.
+
+فقط کافیست محتوای فایل index (1).html خود را با کد بالا جایگزین کنید تا این قابلیت به برنامه شما اضافه شود.
