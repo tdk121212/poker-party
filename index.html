@@ -905,7 +905,15 @@
                 <span class="label">ثبت واریزی</span>
             </button>
             <button class="nav-item" onclick="openModal('record-chips-modal')">
-                <span class="icon">🪙</span>
+                <span class="icon">
+                    <svg viewBox="0 0 24 24" width="2em" height="2em" xmlns="http://www.w3.org/2000/svg">
+                      <!-- دایره بیرونی برای بدنه چیپ، با رنگ آیکون (سفید) پر می‌شود -->
+                      <circle cx="12" cy="12" r="10" fill="currentColor"/>
+                      <!-- دایره داخلی برای طرح میانی چیپ، با رنگ تیره‌تر برای کنتراست پر می‌شود -->
+                      <!-- این به صورت بصری مرکز چیپ را از حلقه بیرونی جدا می‌کند و ظاهر چیپ را ایجاد می‌کند -->
+                      <circle cx="12" cy="12" r="5" fill="#333"/>
+                    </svg>
+                </span>
                 <span class="label">ثبت چیپ</span>
             </button>
             <button class="nav-item" onclick="openModal('convert-chips-modal')">
